@@ -252,6 +252,8 @@ class DataBlock {
 }
 class MSXTape {
     constructor() {
+        this.onload = null;
+        this.onerror = null;
         this.initialize();
     }
     initialize() {
@@ -404,19 +406,39 @@ class MSXTape {
         }
         return block1;
     }
-    load(p_buffer) {
+    load_from_local_file(p_file) {
+        let request = new FileReader();
+        let self = this;
+        request.onload = function (e) {
+            self.name = p_file.name
+                .toLowerCase()
+                .replace(".cas", "");
+            let buffer = request.result;
+            if (self.load_from_buffer(buffer)) {
+                if (typeof self.onload !== "undefined") {
+                    self.onload(buffer);
+                }
+            }
+            else {
+                if (typeof self.onerror !== "undefined") {
+                    self.onerror(buffer);
+                }
+            }
+        };
+        request.readAsArrayBuffer(p_file);
+    }
+    load_from_buffer(p_buffer) {
         let result;
         this.initialize();
         if (p_buffer) {
             let byteArray = new Uint8Array(p_buffer);
             this.buffer.carica(byteArray);
-            this.name = "TEST";
             result = this.load_blocks();
         }
         return result;
     }
     play() {
-        self.audio.play();
+        this.audio.play();
     }
     stop() {
         this.audio.pause();
@@ -444,8 +466,34 @@ class MSXTape {
         }
         return found;
     }
+    export() {
+        if (typeof this.wave.dataURI !== "undefined") {
+            return export_as_file(this);
+        }
+        else {
+            if (typeof this.onerror !== "undefined") {
+                this.onerror(null);
+            }
+        }
+    }
 }
 if (typeof module !== "undefined") {
     module.exports = MSXTape;
+}
+function data_uri_to_blob(dataURI) {
+    let byteString;
+    if (dataURI.split(',')[0].indexOf('base64') >= 0)
+        byteString = atob(dataURI.split(',')[1]);
+    else
+        byteString = unescape(dataURI.split(',')[1]);
+    let mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+    let ia = new Uint8Array(byteString.length);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ia], { type: mimeString });
+}
+function export_as_file(p_self) {
+    return new Blob([data_uri_to_blob(p_self.wave.dataURI)]);
 }
 //# sourceMappingURL=msxtape.js.map

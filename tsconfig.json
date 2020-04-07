@@ -13,6 +13,7 @@
         "lib/riffwave.ts",
         "parameters.ts",
         "buffer.ts",
-        "datablock.ts"
+        "datablock.ts",
+        "file_export.ts"
     ]
 }

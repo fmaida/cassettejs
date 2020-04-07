@@ -12,6 +12,8 @@ class MSXTape {
     public  name:string;
     private readonly parameters:MSXTapeParameters;
     private buffer:Buffer;
+    public  onload = null;
+    public  onerror = null;
     /* HTML5 Audio Element */
     private audio;
     private wave;
@@ -306,11 +308,37 @@ class MSXTape {
 
     // -=-=---------------------------------------------------------------=-=-
 
+    load_from_local_file(p_file)
+    {
+        let request = new FileReader();
+        let self = this;
+
+        request.onload = function (e) {
+            self.name = p_file.name
+                .toLowerCase()
+                .replace(".cas", "");
+            let buffer = request.result;
+            if (self.load_from_buffer(buffer)) {
+                if (typeof self.onload !== "undefined") {
+                    self.onload(buffer);
+                }
+            } else {
+                if (typeof self.onerror !== "undefined") {
+                    self.onerror(buffer);
+                }
+            }
+        };
+
+        request.readAsArrayBuffer(p_file);
+    }
+
+    // -=-=---------------------------------------------------------------=-=-
+
     /**
      * Load a file in memory and converts it to a wav file
      * @param p_file - The file that must be loaded
      */
-    load(p_buffer)
+    load_from_buffer(p_buffer)
     {
         let result:boolean;
 
@@ -329,7 +357,6 @@ class MSXTape {
         if (p_buffer) {
             let byteArray = new Uint8Array(p_buffer);
             this.buffer.carica(byteArray);
-            this.name = "TEST"; //p_file.name.toLowerCase().trim().replace(".cas", "")
             //console.log(self.buffer);
             result = this.load_blocks();
         }
@@ -344,7 +371,7 @@ class MSXTape {
      */
     play()
     {
-        self.audio.play();
+        this.audio.play();
     }
     
     // -=-=---------------------------------------------------------------=-=-
@@ -396,7 +423,18 @@ class MSXTape {
 
         return found
     }
-    
+    // -=-=---------------------------------------------------------------=-=-
+
+    export()
+    {
+        if (typeof this.wave.dataURI !== "undefined") {
+            return export_as_file(this);
+        } else {
+            if (typeof this.onerror !== "undefined") {
+                this.onerror(null);
+            }
+        }
+    }
 }
 
 if (typeof module !== "undefined") {
