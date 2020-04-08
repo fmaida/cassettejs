@@ -13,7 +13,8 @@
         "lib/riffwave.ts",
         "parameters.ts",
         "buffer.ts",
-        "datablock.ts",
+        "msx/datablock.ts",
+        "msx/cassette.ts",
         "file_export.ts"
     ]
 }

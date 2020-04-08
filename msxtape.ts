@@ -1,11 +1,15 @@
 /// <reference path="./lib/riffwave.ts"/>
 /// <reference path="./parameters.ts"/>
 /// <reference path="./buffer.ts"/>
-/// <reference path="./datablock.ts"/>
+/// <reference path="./msx/datablock.ts"/>
+/// <reference path="./msx/cassette.ts"/>
 /// <reference path="./module.d.ts" />
 
+/**
+ *
+ */
 class MSXTape {
-    
+
     // -=-=---------------------------------------------------------------=-=-
     // GENERIC PARAMETERS
     // -=-=---------------------------------------------------------------=-=-
@@ -313,23 +317,52 @@ class MSXTape {
         let request = new FileReader();
         let self = this;
 
-        request.onload = function (e) {
-            self.name = p_file.name
-                .toLowerCase()
-                .replace(".cas", "");
-            let buffer = request.result;
-            if (self.load_from_buffer(buffer)) {
-                if (typeof self.onload !== "undefined") {
-                    self.onload(buffer);
-                }
-            } else {
-                if (typeof self.onerror !== "undefined") {
-                    self.onerror(buffer);
+        request.onloadend = function (e) {
+            if (e.target.readyState == FileReader.DONE) {
+                self.name = p_file.name
+                    .toLowerCase()
+                    .replace(".cas", "");
+                let buffer = request.result;
+                if (self.load_from_buffer(buffer)) {
+                    if (typeof self.onload !== "undefined") {
+                        self.onload(buffer);
+                    }
+                    return true;
+                } else {
+                    if (typeof self.onerror !== "undefined") {
+                        self.onerror(buffer);
+                    }
+                    return false;
                 }
             }
         };
 
         request.readAsArrayBuffer(p_file);
+    }
+
+    // -=-=---------------------------------------------------------------=-=-
+
+    load_from_remote_file(p_url)
+    {
+        let self = this;
+
+        if (typeof jQuery !== "undefined") {
+            jQuery.get(p_url, function(buffer) {
+                var buf = new ArrayBuffer(buffer.length*2); // 2 bytes for each char
+                var bufView = new Uint16Array(buf);
+                for (var i=0, strLen=buffer.length; i < strLen; i++) {
+                    bufView[i] = buffer.charCodeAt(i);
+                }
+                if (self.load_from_buffer(buf)) {
+                    if (typeof self.onload !== "undefined") {
+                        self.onload(buffer);
+                    }
+                }
+            });
+            return true;
+        } else {
+            return false;
+        }
     }
 
     // -=-=---------------------------------------------------------------=-=-

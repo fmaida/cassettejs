@@ -1,8 +1,21 @@
-///<reference path="./parameters.ts"/>
-/* gigetto */
+///<reference path="../parameters.ts"/>
+
 class DataBlock {
 
-    static parametri:MSXTapeParameters;
+    static blocco_intestazione = new Uint8Array(
+        [0x1F, 0xA6, 0xDE, 0xBA, 0xCC, 0x13, 0x7D, 0x74]);
+
+    static blocco_file_ascii = new Uint8Array(
+        [0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA,
+            0xEA, 0xEA, 0xEA, 0xEA]);
+
+    static blocco_file_basic = new Uint8Array(
+        [0xD3, 0xD3, 0xD3, 0xD3, 0xD3,
+            0xD3, 0xD3, 0xD3, 0xD3, 0xD3]);
+
+    static blocco_file_binario = new Uint8Array(
+        [0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
+            0xD0, 0xD0, 0xD0, 0xD0, 0xD0]);
 
     private name:string;
     private type:string;
@@ -94,11 +107,11 @@ class DataBlock {
     {
         var block_type = "custom";
 
-        if (this.contains(DataBlock.parametri.blocco_file_ascii)) {
+        if (this.contains(DataBlock.blocco_file_ascii)) {
             block_type = "ascii";
-        } else if (this.contains(DataBlock.parametri.blocco_file_basic)) {
+        } else if (this.contains(DataBlock.blocco_file_basic)) {
             block_type = "basic";
-        } else if (this.contains(DataBlock.parametri.blocco_file_binario)) {
+        } else if (this.contains(DataBlock.blocco_file_binario)) {
             block_type = "binary";
         }
 

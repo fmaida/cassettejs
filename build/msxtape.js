@@ -208,13 +208,13 @@ class DataBlock {
     }
     analyze_block_type() {
         var block_type = "custom";
-        if (this.contains(DataBlock.parametri.blocco_file_ascii)) {
+        if (this.contains(DataBlock.blocco_file_ascii)) {
             block_type = "ascii";
         }
-        else if (this.contains(DataBlock.parametri.blocco_file_basic)) {
+        else if (this.contains(DataBlock.blocco_file_basic)) {
             block_type = "basic";
         }
-        else if (this.contains(DataBlock.parametri.blocco_file_binario)) {
+        else if (this.contains(DataBlock.blocco_file_binario)) {
             block_type = "binary";
         }
         return block_type;
@@ -248,6 +248,18 @@ class DataBlock {
             length = -1;
         }
         return length;
+    }
+}
+DataBlock.blocco_intestazione = new Uint8Array([0x1F, 0xA6, 0xDE, 0xBA, 0xCC, 0x13, 0x7D, 0x74]);
+DataBlock.blocco_file_ascii = new Uint8Array([0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA,
+    0xEA, 0xEA, 0xEA, 0xEA]);
+DataBlock.blocco_file_basic = new Uint8Array([0xD3, 0xD3, 0xD3, 0xD3, 0xD3,
+    0xD3, 0xD3, 0xD3, 0xD3, 0xD3]);
+DataBlock.blocco_file_binario = new Uint8Array([0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
+    0xD0, 0xD0, 0xD0, 0xD0, 0xD0]);
+class Cassette {
+    prova() {
+        let a = 5;
     }
 }
 class MSXTape {
@@ -409,23 +421,48 @@ class MSXTape {
     load_from_local_file(p_file) {
         let request = new FileReader();
         let self = this;
-        request.onload = function (e) {
-            self.name = p_file.name
-                .toLowerCase()
-                .replace(".cas", "");
-            let buffer = request.result;
-            if (self.load_from_buffer(buffer)) {
-                if (typeof self.onload !== "undefined") {
-                    self.onload(buffer);
+        request.onloadend = function (e) {
+            if (e.target.readyState == FileReader.DONE) {
+                self.name = p_file.name
+                    .toLowerCase()
+                    .replace(".cas", "");
+                let buffer = request.result;
+                if (self.load_from_buffer(buffer)) {
+                    if (typeof self.onload !== "undefined") {
+                        self.onload(buffer);
+                    }
+                    return true;
                 }
-            }
-            else {
-                if (typeof self.onerror !== "undefined") {
-                    self.onerror(buffer);
+                else {
+                    if (typeof self.onerror !== "undefined") {
+                        self.onerror(buffer);
+                    }
+                    return false;
                 }
             }
         };
         request.readAsArrayBuffer(p_file);
+    }
+    load_from_remote_file(p_url) {
+        let self = this;
+        if (typeof jQuery !== "undefined") {
+            jQuery.get(p_url, function (buffer) {
+                var buf = new ArrayBuffer(buffer.length * 2);
+                var bufView = new Uint16Array(buf);
+                for (var i = 0, strLen = buffer.length; i < strLen; i++) {
+                    bufView[i] = buffer.charCodeAt(i);
+                }
+                if (self.load_from_buffer(buf)) {
+                    if (typeof self.onload !== "undefined") {
+                        self.onload(buffer);
+                    }
+                }
+            });
+            return true;
+        }
+        else {
+            return false;
+        }
     }
     load_from_buffer(p_buffer) {
         let result;
