@@ -5,6 +5,17 @@ class Buffer {
     // -=-=---------------------------------------------------------------=-=-
 
     /**
+     * Load a buffer in memory
+     *
+     * @param {Uint8Array} p_dati
+     */
+    constructor(p_dati:Uint8Array) {
+        this.carica(p_dati);
+    }
+
+    // -=-=---------------------------------------------------------------=-=-
+
+    /**
      * Carica il buffer
      *
      * @param p_dati
@@ -12,7 +23,6 @@ class Buffer {
     carica(p_dati:Uint8Array)
     {
         this.dati = p_dati;
-
     }
 
     // -=-=---------------------------------------------------------------=-=-
@@ -73,7 +83,7 @@ class Buffer {
 
         // Il browser su cui gira il programma supporta Uint8Array.slice ?
 
-        if (typeof(this.dati.slice) != "undefined") {
+        if (typeof(this.dati.slice) !== "undefined") {
 
             // Se il browser su cui sta girando lo script supporta
             // il metodo "slice" su di un'array Uint8Array, lo usa
@@ -102,3 +112,4 @@ class Buffer {
     }
 
 }
+//

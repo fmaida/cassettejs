@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
+        "module": "system",
         "target": "ES6",
         "noImplicitAny": false,
         "removeComments": true,
@@ -12,9 +12,10 @@
         "msxtape.ts",
         "lib/riffwave.ts",
         "parameters.ts",
-        "buffer.ts",
+        "common/buffer.ts",
         "msx/datablock.ts",
-        "msx/cassette.ts",
+        "msx/export.ts",
+        "msx/msx.ts",
         "file_export.ts"
     ]
 }

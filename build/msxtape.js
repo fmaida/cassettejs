@@ -94,16 +94,12 @@ class MSXTapeParameters {
             0xD3, 0xD3, 0xD3, 0xD3, 0xD3]);
         this.blocco_file_binario = new Uint8Array([0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
             0xD0, 0xD0, 0xD0, 0xD0, 0xD0]);
-        this.frequenza = 44100;
-        this.bitrate = 2400;
-        this.ampiezza = 0.90;
-        this.sincronismo_lungo = 2500;
-        this.sincronismo_corto = 1500;
-        this.silenzio_lungo = 2000;
-        this.silenzio_corto = 1250;
     }
 }
 class Buffer {
+    constructor(p_dati) {
+        this.carica(p_dati);
+    }
     carica(p_dati) {
         this.dati = p_dati;
     }
@@ -134,7 +130,7 @@ class Buffer {
     splitta(p_inizio = 0, p_fine = this.dati.byteLength) {
         let output;
         output = new Uint8Array(p_fine - p_inizio);
-        if (typeof (this.dati.slice) != "undefined") {
+        if (typeof (this.dati.slice) !== "undefined") {
             output = this.dati.slice(p_inizio, p_fine);
         }
         else {
@@ -208,13 +204,13 @@ class DataBlock {
     }
     analyze_block_type() {
         var block_type = "custom";
-        if (this.contains(DataBlock.blocco_file_ascii)) {
+        if (this.contains(BlockTypes.blocco_file_ascii)) {
             block_type = "ascii";
         }
-        else if (this.contains(DataBlock.blocco_file_basic)) {
+        else if (this.contains(BlockTypes.blocco_file_basic)) {
             block_type = "basic";
         }
-        else if (this.contains(DataBlock.blocco_file_binario)) {
+        else if (this.contains(BlockTypes.blocco_file_binario)) {
             block_type = "binary";
         }
         return block_type;
@@ -250,41 +246,31 @@ class DataBlock {
         return length;
     }
 }
-DataBlock.blocco_intestazione = new Uint8Array([0x1F, 0xA6, 0xDE, 0xBA, 0xCC, 0x13, 0x7D, 0x74]);
-DataBlock.blocco_file_ascii = new Uint8Array([0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA,
-    0xEA, 0xEA, 0xEA, 0xEA]);
-DataBlock.blocco_file_basic = new Uint8Array([0xD3, 0xD3, 0xD3, 0xD3, 0xD3,
-    0xD3, 0xD3, 0xD3, 0xD3, 0xD3]);
-DataBlock.blocco_file_binario = new Uint8Array([0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
-    0xD0, 0xD0, 0xD0, 0xD0, 0xD0]);
-class Cassette {
-    prova() {
-        let a = 5;
-    }
+class BlockTypes {
 }
-class MSXTape {
-    constructor() {
-        this.onload = null;
-        this.onerror = null;
-        this.initialize();
-    }
-    initialize() {
-        this.name = "";
-        this.parameters = new MSXTapeParameters();
-        this.buffer = new Buffer();
-        this.audio = new Audio();
-        this.wave = new RIFFWAVE();
-        this.data = [];
-        this.wave.header.sampleRate = this.parameters.frequenza;
-        this.wave.header.numChannels = 1;
+BlockTypes.blocco_intestazione = new Uint8Array([0x1F, 0xA6, 0xDE, 0xBA, 0xCC, 0x13, 0x7D, 0x74]);
+BlockTypes.blocco_file_ascii = new Uint8Array([0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA,
+    0xEA, 0xEA, 0xEA, 0xEA]);
+BlockTypes.blocco_file_basic = new Uint8Array([0xD3, 0xD3, 0xD3, 0xD3, 0xD3,
+    0xD3, 0xD3, 0xD3, 0xD3, 0xD3]);
+BlockTypes.blocco_file_binario = new Uint8Array([0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
+    0xD0, 0xD0, 0xD0, 0xD0, 0xD0]);
+class Export {
+    constructor(p_list) {
+        this.frequenza = 44100;
+        this.bitrate = 2400;
+        this.ampiezza = 0.90;
+        this.sincronismo_lungo = 2500;
+        this.sincronismo_corto = 1500;
+        this.silenzio_lungo = 2000;
+        this.silenzio_corto = 1250;
         this.recalculate_waveforms();
-        DataBlock.parametri = this.parameters;
+        this.buffer = [];
     }
     recalculate_waveforms() {
-        var params = this.parameters;
-        params.campionamenti = params.frequenza / params.bitrate;
-        var passo = Math.floor(params.campionamenti / 4);
-        let max = Math.floor(255 * params.ampiezza);
+        this.campionamenti = this.frequenza / this.bitrate;
+        let passo = Math.floor(this.campionamenti / 4);
+        let max = Math.floor(255 * this.ampiezza);
         let min = 255 - max;
         let i;
         let temp = [];
@@ -292,7 +278,7 @@ class MSXTape {
             temp.push(min);
         for (let i = 0; i < passo * 2; i++)
             temp.push(max);
-        params.wave_bit_0 = new Uint8Array(temp);
+        this.wave_bit_0 = new Uint8Array(temp);
         temp = [];
         for (i = 0; i < passo; i++)
             temp.push(min);
@@ -302,27 +288,26 @@ class MSXTape {
             temp.push(min);
         for (i = 0; i < passo; i++)
             temp.push(max);
-        params.wave_bit_1 = new Uint8Array(temp);
+        this.wave_bit_1 = new Uint8Array(temp);
         temp = [];
         for (i = 0; i < passo * 4; i++)
             temp.push(128);
-        params.wave_silenzio = new Uint8Array(temp);
+        this.wave_silenzio = new Uint8Array(temp);
     }
     inserisci_bit(p_bit) {
-        var i = 0;
-        var par = this.parameters;
-        var onda;
-        if (p_bit == 0) {
-            onda = par.wave_bit_0;
+        let i = 0;
+        let onda;
+        if (p_bit === 0) {
+            onda = this.wave_bit_0;
         }
-        else if (p_bit == 1) {
-            onda = par.wave_bit_1;
+        else if (p_bit === 1) {
+            onda = this.wave_bit_1;
         }
         else {
-            onda = par.wave_silenzio;
+            onda = this.wave_silenzio;
         }
         for (i = 0; i < onda.length; i++) {
-            this.data.push(onda[i]);
+            this.buffer.append(onda[i]);
         }
     }
     inserisci_byte(p_byte) {
@@ -352,47 +337,50 @@ class MSXTape {
         }
     }
     inserisci_sincronismo(p_durata) {
-        var i = 0;
-        var par = this.parameters;
+        let i = 0;
         while (i < par.bitrate * par.campionamenti * p_durata / 1000) {
             this.inserisci_bit(1);
-            i += par.wave_bit_1.length;
+            i += this.wave_bit_1.length;
         }
     }
     add_silence(p_durata) {
-        var i = 0;
-        var par = this.parameters;
-        while (i < par.bitrate * par.campionamenti * p_durata / 1000) {
+        let i = 0;
+        while (i < this.bitrate * this.campionamenti * p_durata / 1000) {
             this.inserisci_bit(-1);
-            i += par.wave_silenzio.length;
+            i += this.wave_silenzio.length;
         }
     }
     genera_file(p_blocco) {
-        this.inserisci_sincronismo(this.parameters.sincronismo_lungo);
+        this.inserisci_sincronismo(this.sincronismo_lungo);
         if (p_blocco.type == "ascii") {
-            this.inserisci_array(this.parameters.blocco_file_ascii);
+            this.inserisci_array(BlockTypes.blocco_file_ascii);
         }
         else if (p_blocco.type == "basic") {
-            this.inserisci_array(this.parameters.blocco_file_basic);
+            this.inserisci_array(BlockTypes.blocco_file_basic);
         }
         else if (p_blocco.type == "binary") {
-            this.inserisci_array(this.parameters.blocco_file_binario);
+            this.inserisci_array(BlockTypes.blocco_file_binario);
         }
         if (p_blocco.type != "custom") {
             this.inserisci_stringa(p_blocco.name);
-            this.add_silence(this.parameters.silenzio_corto);
-            this.inserisci_sincronismo(this.parameters.sincronismo_corto);
+            this.add_silence(this.silenzio_corto);
+            this.inserisci_sincronismo(this.sincronismo_corto);
         }
         this.inserisci_array(p_blocco.data);
+    }
+}
+class MSX {
+    constructor() {
+        this.buffer = null;
     }
     cerca_blocco(p_inizio) {
         let pos1;
         let pos2;
         let block = null;
-        pos1 = this.buffer.cerca(this.parameters.blocco_intestazione, p_inizio);
+        pos1 = this.buffer.cerca(BlockTypes.blocco_intestazione, p_inizio);
         if (pos1 >= 0) {
-            pos1 += this.parameters.blocco_intestazione.length;
-            pos2 = this.buffer.cerca(this.parameters.blocco_intestazione, pos1);
+            pos1 += BlockTypes.blocco_intestazione.length;
+            pos2 = this.buffer.cerca(BlockTypes.blocco_intestazione, pos1);
             if (pos2 < 0) {
                 pos2 = this.buffer.length();
             }
@@ -418,6 +406,50 @@ class MSXTape {
         }
         return block1;
     }
+    load_blocks() {
+        let pos = 0;
+        let block;
+        let found = false;
+        this.list = [];
+        while (block !== null) {
+            if (pos !== 0) {
+            }
+            block = this.estrai_blocco(pos);
+            if (block !== null) {
+                found = true;
+                this.list.push(block);
+                pos = block.get_data_end();
+            }
+        }
+        return found;
+    }
+    load(p_buffer) {
+        let result;
+        this.buffer = new Buffer(p_buffer);
+        result = this.load_blocks();
+        if (result) {
+            this.export = new Export(this.list);
+        }
+        return result;
+    }
+}
+class MSXTape {
+    constructor() {
+        this.onload = null;
+        this.onerror = null;
+        this.initialize();
+    }
+    initialize() {
+        this.name = "";
+        this.parameters = new MSXTapeParameters();
+        this.msx = new MSX();
+        this.audio = new Audio();
+        this.wave = new RIFFWAVE();
+        this.data = [];
+        this.wave.header.sampleRate = this.parameters.frequenza;
+        this.wave.header.numChannels = 1;
+        this.recalculate_waveforms();
+    }
     load_from_local_file(p_file) {
         let request = new FileReader();
         let self = this;
@@ -426,8 +458,8 @@ class MSXTape {
                 self.name = p_file.name
                     .toLowerCase()
                     .replace(".cas", "");
-                let buffer = request.result;
-                if (self.load_from_buffer(buffer)) {
+                let buffer = new Uint8Array(request.result);
+                if (self.msx.load(buffer)) {
                     if (typeof self.onload !== "undefined") {
                         self.onload(buffer);
                     }
@@ -448,11 +480,11 @@ class MSXTape {
         if (typeof jQuery !== "undefined") {
             jQuery.get(p_url, function (buffer) {
                 var buf = new ArrayBuffer(buffer.length * 2);
-                var bufView = new Uint16Array(buf);
+                var bufView = new Uint8Array(buf);
                 for (var i = 0, strLen = buffer.length; i < strLen; i++) {
                     bufView[i] = buffer.charCodeAt(i);
                 }
-                if (self.load_from_buffer(buf)) {
+                if (self.load_from_buffer(bufView)) {
                     if (typeof self.onload !== "undefined") {
                         self.onload(buffer);
                     }
@@ -466,11 +498,11 @@ class MSXTape {
     }
     load_from_buffer(p_buffer) {
         let result;
-        this.initialize();
-        if (p_buffer) {
-            let byteArray = new Uint8Array(p_buffer);
-            this.buffer.carica(byteArray);
-            result = this.load_blocks();
+        this.msx = new MSX();
+        result = this.msx.load(p_buffer);
+        if (result) {
+            this.wave.Make(this.data);
+            this.audio.src = this.wave.dataURI;
         }
         return result;
     }
@@ -480,28 +512,6 @@ class MSXTape {
     stop() {
         this.audio.pause();
         this.audio.currentTime = 0;
-    }
-    load_blocks() {
-        let pos = 0;
-        let block;
-        let found = false;
-        while (block !== null) {
-            if (pos !== 0) {
-                this.add_silence(this.parameters.silenzio_lungo);
-            }
-            block = this.estrai_blocco(pos);
-            if (block !== null) {
-                found = true;
-                this.genera_file(block);
-                console.log(block);
-                pos = block.get_data_end();
-            }
-        }
-        if (found) {
-            this.wave.Make(this.data);
-            this.audio.src = this.wave.dataURI;
-        }
-        return found;
     }
     export() {
         if (typeof this.wave.dataURI !== "undefined") {
