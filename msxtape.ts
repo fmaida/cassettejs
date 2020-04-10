@@ -48,7 +48,6 @@ class MSXTape {
         this.wave.header.sampleRate = this.parameters.frequenza; // set sample rate to 44KHz
         this.wave.header.numChannels = 1; // one channels (mono)
 
-        this.recalculate_waveforms();
         //DataBlock.parametri = this.parameters;
     }
 
@@ -122,9 +121,13 @@ class MSXTape {
         this.msx = new MSX();
         result = this.msx.load(p_buffer);
         if (result) {
-            this.wave.Make(this.data);
+            let audio_file = this.msx.export_as_wav();
+            // VECCHIO CODICE
+            //this.wave.Make(this.data);
             // make the wave file
-            this.audio.src = this.wave.dataURI; // set audio source
+            //this.audio.src = this.wave.dataURI; // set audio source
+            this.audio.src = audio_file.dataURI; // set audio source
+
         }
 
         return result

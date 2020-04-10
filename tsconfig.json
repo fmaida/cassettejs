@@ -14,7 +14,7 @@
         "parameters.ts",
         "common/buffer.ts",
         "msx/datablock.ts",
-        "msx/export.ts",
+        "msx/wavexport.ts",
         "msx/msx.ts",
         "file_export.ts"
     ]

@@ -1,13 +1,14 @@
 /// <reference path="./blocktypes.ts" />
 /// <reference path="./datablock.ts" />
-/// <reference path="./export.ts" />
+/// <reference path="./wavexport.ts" />
 /// <reference path="../common/buffer.ts" />
+
 
 class MSX {
 
     private buffer:Buffer;
     private list:DataBlock[];
-    private export:Export;
+    private export:WAVExport;
 
 
     constructor()
@@ -137,10 +138,21 @@ class MSX {
         //oReq.send(null);
 
         if (result) {
-            this.export = new Export(this.list);
+            this.export = new WAVExport(this.list);
+            for (let block of this.list) {
+                this.export.render_block(block);
+                this.export.add_long_silence();
+            }
         }
 
         return result;
+    }
+
+    // -=-=---------------------------------------------------------------=-=-
+
+    export_as_wav()
+    {
+        return this.export.export_as_wav();
     }
 
 }

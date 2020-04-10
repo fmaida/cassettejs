@@ -255,7 +255,7 @@ BlockTypes.blocco_file_basic = new Uint8Array([0xD3, 0xD3, 0xD3, 0xD3, 0xD3,
     0xD3, 0xD3, 0xD3, 0xD3, 0xD3]);
 BlockTypes.blocco_file_binario = new Uint8Array([0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
     0xD0, 0xD0, 0xD0, 0xD0, 0xD0]);
-class Export {
+class WAVExport {
     constructor(p_list) {
         this.frequenza = 44100;
         this.bitrate = 2400;
@@ -273,42 +273,37 @@ class Export {
         let max = Math.floor(255 * this.ampiezza);
         let min = 255 - max;
         let i;
-        let temp = [];
+        this.wave_bit_0 = new Array();
         for (i = 0; i < passo * 2; i++)
-            temp.push(min);
-        for (let i = 0; i < passo * 2; i++)
-            temp.push(max);
-        this.wave_bit_0 = new Uint8Array(temp);
-        temp = [];
+            this.wave_bit_0.push(min);
+        for (i = 0; i < passo * 2; i++)
+            this.wave_bit_0.push(max);
+        this.wave_bit_1 = new Array();
         for (i = 0; i < passo; i++)
-            temp.push(min);
+            this.wave_bit_1.push(min);
         for (i = 0; i < passo; i++)
-            temp.push(max);
+            this.wave_bit_1.push(max);
         for (i = 0; i < passo; i++)
-            temp.push(min);
+            this.wave_bit_1.push(min);
         for (i = 0; i < passo; i++)
-            temp.push(max);
-        this.wave_bit_1 = new Uint8Array(temp);
-        temp = [];
+            this.wave_bit_1.push(max);
+        this.wave_silenzio = new Array();
         for (i = 0; i < passo * 4; i++)
-            temp.push(128);
-        this.wave_silenzio = new Uint8Array(temp);
+            this.wave_silenzio.push(128);
     }
     inserisci_bit(p_bit) {
         let i = 0;
-        let onda;
+        let waveform;
         if (p_bit === 0) {
-            onda = this.wave_bit_0;
+            waveform = this.wave_bit_0;
         }
         else if (p_bit === 1) {
-            onda = this.wave_bit_1;
+            waveform = this.wave_bit_1;
         }
         else {
-            onda = this.wave_silenzio;
+            waveform = this.wave_silenzio;
         }
-        for (i = 0; i < onda.length; i++) {
-            this.buffer.append(onda[i]);
-        }
+        this.buffer.push(...waveform);
     }
     inserisci_byte(p_byte) {
         this.inserisci_bit(0);
@@ -338,7 +333,7 @@ class Export {
     }
     inserisci_sincronismo(p_durata) {
         let i = 0;
-        while (i < par.bitrate * par.campionamenti * p_durata / 1000) {
+        while (i < this.bitrate * this.campionamenti * p_durata / 1000) {
             this.inserisci_bit(1);
             i += this.wave_bit_1.length;
         }
@@ -350,7 +345,13 @@ class Export {
             i += this.wave_silenzio.length;
         }
     }
-    genera_file(p_blocco) {
+    add_long_silence() {
+        this.add_silence(this.silenzio_lungo);
+    }
+    add_short_silence() {
+        this.add_silence(this.silenzio_corto);
+    }
+    render_block(p_blocco) {
         this.inserisci_sincronismo(this.sincronismo_lungo);
         if (p_blocco.type == "ascii") {
             this.inserisci_array(BlockTypes.blocco_file_ascii);
@@ -367,6 +368,12 @@ class Export {
             this.inserisci_sincronismo(this.sincronismo_corto);
         }
         this.inserisci_array(p_blocco.data);
+        return true;
+    }
+    export_as_wav() {
+        let wav_exporter = new RIFFWAVE();
+        wav_exporter.Make(this.buffer);
+        return wav_exporter;
     }
 }
 class MSX {
@@ -428,9 +435,16 @@ class MSX {
         this.buffer = new Buffer(p_buffer);
         result = this.load_blocks();
         if (result) {
-            this.export = new Export(this.list);
+            this.export = new WAVExport(this.list);
+            for (let block of this.list) {
+                this.export.render_block(block);
+                this.export.add_long_silence();
+            }
         }
         return result;
+    }
+    export_as_wav() {
+        return this.export.export_as_wav();
     }
 }
 class MSXTape {
@@ -448,7 +462,6 @@ class MSXTape {
         this.data = [];
         this.wave.header.sampleRate = this.parameters.frequenza;
         this.wave.header.numChannels = 1;
-        this.recalculate_waveforms();
     }
     load_from_local_file(p_file) {
         let request = new FileReader();
@@ -501,8 +514,8 @@ class MSXTape {
         this.msx = new MSX();
         result = this.msx.load(p_buffer);
         if (result) {
-            this.wave.Make(this.data);
-            this.audio.src = this.wave.dataURI;
+            let audio_file = this.msx.export_as_wav();
+            this.audio.src = audio_file.dataURI;
         }
         return result;
     }
