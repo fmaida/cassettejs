@@ -1,4 +1,4 @@
-const MSXTape = require("./build/msxtape");
+const MSXTape = require("./build/cassettejs");
 const fs = require("fs");
 
 

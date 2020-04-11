@@ -6,16 +6,16 @@
         "removeComments": true,
         "preserveConstEnums": true,
         "sourceMap": true,
-        "outFile": "build/msxtape.js"
+        "outFile": "dist/cassettejs.js"
     },
     "files": [
-        "msxtape.ts",
         "lib/riffwave.ts",
         "parameters.ts",
-        "common/buffer.ts",
+        "common/databuffer.ts",
+        "common/file_export.ts",
         "msx/datablock.ts",
         "msx/wavexport.ts",
         "msx/msx.ts",
-        "file_export.ts"
+        "cassettejs.ts"
     ]
 }

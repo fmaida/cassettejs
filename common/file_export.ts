@@ -1,4 +1,8 @@
-private function data_uri_to_blob(dataURI)
+/**
+ * Maybe the following function is now obsolete, since most part of the work
+ * is now done by FileSaver itself. I should investigate...
+ */
+function data_uri_to_blob(dataURI)
 {
     // convert base64/URLEncoded data component to raw binary data held in a string
     let byteString;
@@ -21,8 +25,11 @@ private function data_uri_to_blob(dataURI)
 
 // -=-=---------------------------------------------------------------=-=-
 
+/**
+ * Maybe the following function is now obsolete, since most part of the work
+ * is now done by FileSaver itself. I should investigate...
+ */
 function export_as_file(p_self)
 {
     return new Blob([data_uri_to_blob(p_self.wave.dataURI)]);
-    // [window.btoa(msx.wave.dataURI)]);
 }

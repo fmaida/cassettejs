@@ -1,12 +1,14 @@
 /// <reference path="./blocktypes.ts" />
 /// <reference path="./datablock.ts" />
 /// <reference path="./wavexport.ts" />
-/// <reference path="../common/buffer.ts" />
+/// <reference path="../common/databuffer.ts" />
 
-
+/**
+ * This class handles a MSX cassette in .CAS format
+ */
 class MSX {
 
-    private buffer:Buffer;
+    private buffer:DataBuffer;
     private list:DataBlock[];
     private export:WAVExport;
 
@@ -18,7 +20,7 @@ class MSX {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    cerca_blocco(p_inizio:number): DataBlock
+    private cerca_blocco(p_inizio:number): DataBlock
     {
         let pos1:number;
         let pos2:number;
@@ -28,8 +30,11 @@ class MSX {
         pos1 = this.buffer.cerca(BlockTypes.blocco_intestazione, p_inizio);
         if (pos1 >= 0) {
             pos1 += BlockTypes.blocco_intestazione.length;
+            // Seek for the second header
             pos2 = this.buffer.cerca(BlockTypes.blocco_intestazione, pos1);
             if (pos2 < 0) {
+                // No further headers? Then we'll consider everything left
+                // on the buffer as a single whole block
                 pos2 = this.buffer.length();
             }
             block = new DataBlock(this.buffer.splitta(pos1, pos2));
@@ -46,8 +51,10 @@ class MSX {
 
     /**
      * Estrae un blocco dal buffer
+     *
+     * depends on this.cerca_blocco
      */
-    estrai_blocco(p_inizio):DataBlock
+    private estrai_blocco(p_inizio):DataBlock
     {
         let block1:DataBlock;
         let block2:DataBlock;
@@ -57,12 +64,9 @@ class MSX {
             // console.log(block1);
             if (!block1.is_custom()) {
                 block2 = this.cerca_blocco(block1.get_data_end());
-                // console.log(block2);
                 if(block2 !== null) {
                     // Merge the two blocks
                     block1.append_block(block2);
-                    // console.log(block1);
-                    // console.log("-------------------------------");
                 }
             }
         }
@@ -101,13 +105,6 @@ class MSX {
             }
         }
 
-        // QUESTA PARTE E' DA SPOSTARE FUORI DALLA CLASSE CASSETTE.TS
-        /* if (found) {
-            this.wave.Make(this.data);
-            // make the wave file
-            this.audio.src = this.wave.dataURI; // set audio source
-        } */
-
         return found
     }
 
@@ -117,7 +114,7 @@ class MSX {
      * Load a file in memory and converts it to a wav file
      * @param p_buffer {Uint8Array} - The file that must be loaded
      */
-    load(p_buffer:Uint8Array)
+    load(p_buffer:Array<number>, callback_function=undefined)
     {
         let result:boolean;
 
@@ -130,19 +127,12 @@ class MSX {
          */
 
         /* Let' put the Downloaded file in a variabile */
-        this.buffer = new Buffer(p_buffer);
+        this.buffer = new DataBuffer(p_buffer);
          //console.log(self.buffer);
         result = this.load_blocks();
 
-        //oReq.readAsBinaryString(p_file);
-        //oReq.send(null);
-
         if (result) {
-            this.export = new WAVExport(this.list);
-            for (let block of this.list) {
-                this.export.render_block(block);
-                this.export.add_long_silence();
-            }
+            this.export_as_wav(callback_function);
         }
 
         return result;
@@ -150,9 +140,26 @@ class MSX {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    export_as_wav()
+    export_as_wav(callback_function = undefined)
     {
+        let i:number = 0;
+
+        this.export = new WAVExport(this.list);
+        for (let block of this.list) {
+            i += 1;
+            if (typeof callback_function !== "undefined") {
+                callback_function(i, this.list.length);
+            }
+            this.export.render_block(block);
+            if (i < this.list.length) {
+                this.export.add_long_silence();
+            }
+        }
+
         return this.export.export_as_wav();
+
     }
+
+    // -=-=---------------------------------------------------------------=-=-
 
 }

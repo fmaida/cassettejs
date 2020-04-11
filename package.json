@@ -1,8 +1,8 @@
 {
-  "name": "tapejs",
+  "name": "cassettejs",
   "version": "1.0.0",
   "description": "",
-  "main": "msxtape.ts",
+  "main": "cassettejs.ts",
   "scripts": {
     "test": "jest"
   },

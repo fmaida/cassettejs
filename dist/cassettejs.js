@@ -96,54 +96,6 @@ class MSXTapeParameters {
             0xD0, 0xD0, 0xD0, 0xD0, 0xD0]);
     }
 }
-class Buffer {
-    constructor(p_dati) {
-        this.carica(p_dati);
-    }
-    carica(p_dati) {
-        this.dati = p_dati;
-    }
-    contiene(p_ricerca, p_inizio = 0) {
-        let i = 0;
-        let uguale = true;
-        while ((i < p_ricerca.byteLength) && (uguale)) {
-            if (this.dati[p_inizio + i] !== p_ricerca[i]) {
-                uguale = false;
-            }
-            i++;
-        }
-        return uguale;
-    }
-    cerca(p_ricerca, p_inizio = 0) {
-        let i = p_inizio;
-        let posizione = -1;
-        let trovato = false;
-        while ((i < this.dati.byteLength) && (!trovato)) {
-            if (this.contiene(p_ricerca, i)) {
-                posizione = i;
-                trovato = true;
-            }
-            i++;
-        }
-        return posizione;
-    }
-    splitta(p_inizio = 0, p_fine = this.dati.byteLength) {
-        let output;
-        output = new Uint8Array(p_fine - p_inizio);
-        if (typeof (this.dati.slice) !== "undefined") {
-            output = this.dati.slice(p_inizio, p_fine);
-        }
-        else {
-            for (let i = p_inizio; i < p_fine; i++) {
-                output[i - p_inizio] = this.dati[i];
-            }
-        }
-        return output;
-    }
-    length() {
-        return this.dati.byteLength;
-    }
-}
 class DataBlock {
     constructor(p_data = null) {
         if (p_data !== null)
@@ -172,21 +124,21 @@ class DataBlock {
         this.type = this.analyze_block_type();
         if (!this.is_custom()) {
             this.set_name(this.analyze_block_name());
-            let temp = new Uint8Array(p_data.byteLength - 16);
-            for (let i = 16; i < p_data.byteLength; i++) {
+            let temp = Array(p_data.length - 16);
+            for (let i = 16; i < p_data.length; i++) {
                 temp[i - 16] = p_data[i];
             }
             this.data = temp;
         }
     }
     append_block(p_block) {
-        let data = new Uint8Array(this.data.byteLength + p_block.data.byteLength);
+        let data = new Array(this.data.length + p_block.data.length);
         let offset = 0;
-        for (let i = 0; i < this.data.byteLength; i++) {
+        for (let i = 0; i < this.data.length; i++) {
             data[offset + i] = this.data[i];
         }
-        offset += this.data.byteLength;
-        for (let i = 0; i < p_block.data.byteLength; i++) {
+        offset += this.data.length;
+        for (let i = 0; i < p_block.data.length; i++) {
             data[offset + i] = p_block.data[i];
         }
         this.data = data;
@@ -197,7 +149,7 @@ class DataBlock {
         for (let i = 0; i < p_pattern.length; i++) {
             if (this.data[i] !== p_pattern[i]) {
                 match = false;
-                i = p_pattern.byteLength;
+                i = p_pattern.length;
             }
         }
         return match;
@@ -246,19 +198,10 @@ class DataBlock {
         return length;
     }
 }
-class BlockTypes {
-}
-BlockTypes.blocco_intestazione = new Uint8Array([0x1F, 0xA6, 0xDE, 0xBA, 0xCC, 0x13, 0x7D, 0x74]);
-BlockTypes.blocco_file_ascii = new Uint8Array([0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA,
-    0xEA, 0xEA, 0xEA, 0xEA]);
-BlockTypes.blocco_file_basic = new Uint8Array([0xD3, 0xD3, 0xD3, 0xD3, 0xD3,
-    0xD3, 0xD3, 0xD3, 0xD3, 0xD3]);
-BlockTypes.blocco_file_binario = new Uint8Array([0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
-    0xD0, 0xD0, 0xD0, 0xD0, 0xD0]);
 class WAVExport {
     constructor(p_list) {
         this.frequenza = 44100;
-        this.bitrate = 2400;
+        this.bitrate = 2205;
         this.ampiezza = 0.90;
         this.sincronismo_lungo = 2500;
         this.sincronismo_corto = 1500;
@@ -321,7 +264,7 @@ class WAVExport {
     }
     inserisci_array(p_array) {
         var i = 0;
-        for (i = 0; i < p_array.byteLength; i++) {
+        for (i = 0; i < p_array.length; i++) {
             this.inserisci_byte(p_array[i]);
         }
     }
@@ -372,8 +315,67 @@ class WAVExport {
     }
     export_as_wav() {
         let wav_exporter = new RIFFWAVE();
+        wav_exporter.header.sampleRate = this.frequenza;
+        wav_exporter.header.numChannels = 1;
         wav_exporter.Make(this.buffer);
         return wav_exporter;
+    }
+}
+class BlockTypes {
+}
+BlockTypes.blocco_intestazione = [0x1F, 0xA6, 0xDE, 0xBA, 0xCC, 0x13, 0x7D, 0x74];
+BlockTypes.blocco_file_ascii = [0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA,
+    0xEA, 0xEA, 0xEA, 0xEA];
+BlockTypes.blocco_file_basic = [0xD3, 0xD3, 0xD3, 0xD3, 0xD3,
+    0xD3, 0xD3, 0xD3, 0xD3, 0xD3];
+BlockTypes.blocco_file_binario = [0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
+    0xD0, 0xD0, 0xD0, 0xD0, 0xD0];
+class DataBuffer {
+    constructor(p_dati) {
+        this.carica(p_dati);
+    }
+    carica(p_dati) {
+        this.dati = p_dati;
+    }
+    contiene(p_ricerca, p_inizio = 0) {
+        let i = 0;
+        let uguale = true;
+        while ((i < p_ricerca.length) && (uguale)) {
+            if (this.dati[p_inizio + i] !== p_ricerca[i]) {
+                uguale = false;
+            }
+            i++;
+        }
+        return uguale;
+    }
+    cerca(p_ricerca, p_inizio = 0) {
+        let i = p_inizio;
+        let posizione = -1;
+        let trovato = false;
+        while ((i < this.dati.length) && (!trovato)) {
+            if (this.contiene(p_ricerca, i)) {
+                posizione = i;
+                trovato = true;
+            }
+            i++;
+        }
+        return posizione;
+    }
+    splitta(p_inizio = 0, p_fine = this.dati.length) {
+        let output;
+        output = new Array(p_fine - p_inizio);
+        if (typeof (this.dati.slice) !== "undefined") {
+            output = this.dati.slice(p_inizio, p_fine);
+        }
+        else {
+            for (let i = p_inizio; i < p_fine; i++) {
+                output[i - p_inizio] = this.dati[i];
+            }
+        }
+        return output;
+    }
+    length() {
+        return this.dati.length;
     }
 }
 class MSX {
@@ -430,27 +432,38 @@ class MSX {
         }
         return found;
     }
-    load(p_buffer) {
+    load(p_buffer, callback_function = undefined) {
         let result;
-        this.buffer = new Buffer(p_buffer);
+        this.buffer = new DataBuffer(p_buffer);
         result = this.load_blocks();
         if (result) {
-            this.export = new WAVExport(this.list);
-            for (let block of this.list) {
-                this.export.render_block(block);
-                this.export.add_long_silence();
-            }
+            this.export_as_wav(callback_function);
         }
         return result;
     }
-    export_as_wav() {
+    export_as_wav(callback_function = undefined) {
+        let i = 0;
+        this.export = new WAVExport(this.list);
+        for (let block of this.list) {
+            i += 1;
+            if (typeof callback_function !== "undefined") {
+                callback_function(i, this.list.length);
+            }
+            this.export.render_block(block);
+            if (i < this.list.length) {
+                this.export.add_long_silence();
+            }
+        }
         return this.export.export_as_wav();
     }
 }
-class MSXTape {
+class CassetteJS {
     constructor() {
-        this.onload = null;
-        this.onerror = null;
+        this.on_load = undefined;
+        this.on_block_analysis = undefined;
+        this.on_job_completed = undefined;
+        this.on_error = undefined;
+        this.on_audio_export = undefined;
         this.initialize();
     }
     initialize() {
@@ -458,29 +471,30 @@ class MSXTape {
         this.parameters = new MSXTapeParameters();
         this.msx = new MSX();
         this.audio = new Audio();
-        this.wave = new RIFFWAVE();
-        this.data = [];
-        this.wave.header.sampleRate = this.parameters.frequenza;
-        this.wave.header.numChannels = 1;
     }
     load_from_local_file(p_file) {
         let request = new FileReader();
         let self = this;
         request.onloadend = function (e) {
             if (e.target.readyState == FileReader.DONE) {
+                if (typeof self.on_load !== "undefined") {
+                    self.on_load(request.result.byteLength);
+                }
                 self.name = p_file.name
                     .toLowerCase()
                     .replace(".cas", "");
                 let buffer = new Uint8Array(request.result);
-                if (self.msx.load(buffer)) {
-                    if (typeof self.onload !== "undefined") {
-                        self.onload(buffer);
+                if (self.msx.load(buffer, self.on_block_analysis)) {
+                    let audio_file = self.msx.export_as_wav();
+                    self.audio.src = audio_file.dataURI;
+                    if (typeof self.on_job_completed !== "undefined") {
+                        self.on_job_completed(buffer.length);
                     }
                     return true;
                 }
                 else {
-                    if (typeof self.onerror !== "undefined") {
-                        self.onerror(buffer);
+                    if (typeof self.on_error !== "undefined") {
+                        self.on_error(buffer);
                     }
                     return false;
                 }
@@ -494,12 +508,12 @@ class MSXTape {
             jQuery.get(p_url, function (buffer) {
                 var buf = new ArrayBuffer(buffer.length * 2);
                 var bufView = new Uint8Array(buf);
-                for (var i = 0, strLen = buffer.length; i < strLen; i++) {
+                for (let i = 0, strLen = buffer.length; i < strLen; i++) {
                     bufView[i] = buffer.charCodeAt(i);
                 }
                 if (self.load_from_buffer(bufView)) {
-                    if (typeof self.onload !== "undefined") {
-                        self.onload(buffer);
+                    if (typeof self.on_job_completed !== "undefined") {
+                        self.on_job_completed(buffer);
                     }
                 }
             });
@@ -512,7 +526,7 @@ class MSXTape {
     load_from_buffer(p_buffer) {
         let result;
         this.msx = new MSX();
-        result = this.msx.load(p_buffer);
+        result = this.msx.load(p_buffer, this.on_block_analysis);
         if (result) {
             let audio_file = this.msx.export_as_wav();
             this.audio.src = audio_file.dataURI;
@@ -522,23 +536,34 @@ class MSXTape {
     play() {
         this.audio.play();
     }
+    pause() {
+        this.audio.pause();
+    }
     stop() {
         this.audio.pause();
         this.audio.currentTime = 0;
     }
-    export() {
-        if (typeof this.wave.dataURI !== "undefined") {
-            return export_as_file(this);
-        }
-        else {
-            if (typeof this.onerror !== "undefined") {
-                this.onerror(null);
+    save_as_wav() {
+        let data = this.msx.export_as_wav().dataURI;
+        if (typeof data !== "undefined") {
+            if (typeof this.on_audio_export !== "undefined") {
+                this.on_audio_export(data);
+            }
+            else {
+                return false;
             }
         }
+        else {
+            if (typeof this.on_error !== "undefined") {
+                this.on_error(null);
+            }
+            return false;
+        }
+        return true;
     }
 }
 if (typeof module !== "undefined") {
-    module.exports = MSXTape;
+    module.exports = CassetteJS;
 }
 function data_uri_to_blob(dataURI) {
     let byteString;
@@ -556,4 +581,4 @@ function data_uri_to_blob(dataURI) {
 function export_as_file(p_self) {
     return new Blob([data_uri_to_blob(p_self.wave.dataURI)]);
 }
-//# sourceMappingURL=msxtape.js.map
+//# sourceMappingURL=cassettejs.js.map

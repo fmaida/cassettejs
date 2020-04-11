@@ -1,6 +1,6 @@
-class Buffer {
+class DataBuffer {
 
-    private dati:Uint8Array;
+    private dati:Array<number>;
 
     // -=-=---------------------------------------------------------------=-=-
 
@@ -9,7 +9,7 @@ class Buffer {
      *
      * @param {Uint8Array} p_dati
      */
-    constructor(p_dati:Uint8Array) {
+    constructor(p_dati:Array<number>) {
         this.carica(p_dati);
     }
 
@@ -20,7 +20,7 @@ class Buffer {
      *
      * @param p_dati
      */
-    carica(p_dati:Uint8Array)
+    carica(p_dati:Array<number>)
     {
         this.dati = p_dati;
     }
@@ -35,14 +35,14 @@ class Buffer {
      * @param p_inizio      La posizione da cui cercare
      * @returns {boolean}   Restituisce True se ha trovato la sottostringa
      */
-    contiene(p_ricerca:Uint8Array, p_inizio:number = 0):boolean
+    contiene(p_ricerca:Array<number>, p_inizio:number = 0):boolean
     {
         let i:number = 0;
         let uguale:boolean = true;
 
 
         // Finchè il contenuto è uguale continua a verificare
-        while ((i < p_ricerca.byteLength) && (uguale)) {
+        while ((i < p_ricerca.length) && (uguale)) {
             if (this.dati[p_inizio + i] !== p_ricerca[i]) {
                 uguale = false;
             }
@@ -54,14 +54,14 @@ class Buffer {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    cerca(p_ricerca:Uint8Array, p_inizio:number = 0):number
+    cerca(p_ricerca:Array<number>, p_inizio:number = 0):number
     {
         let i:number = p_inizio;
         let posizione:number = -1;
         let trovato:boolean = false;
 
 
-        while ((i < this.dati.byteLength) && (!trovato)) {
+        while ((i < this.dati.length) && (!trovato)) {
             if (this.contiene(p_ricerca, i)) {
                 posizione = i;
                 trovato = true;
@@ -74,12 +74,12 @@ class Buffer {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    splitta(p_inizio:number = 0, p_fine:number = this.dati.byteLength):Uint8Array
+    splitta(p_inizio:number = 0, p_fine:number = this.dati.length):Array<number>
     {
-        let output:Uint8Array;
+        let output:Array<number>;
 
 
-        output = new Uint8Array(p_fine - p_inizio);
+        output = new Array<number>(p_fine - p_inizio);
 
         // Il browser su cui gira il programma supporta Uint8Array.slice ?
 
@@ -108,7 +108,7 @@ class Buffer {
 
     length():number
     {
-        return this.dati.byteLength;
+        return this.dati.length;
     }
 
 }

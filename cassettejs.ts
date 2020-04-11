@@ -8,7 +8,7 @@
 /**
  *
  */
-class MSXTape {
+class CassetteJS {
 
     // -=-=---------------------------------------------------------------=-=-
     // GENERIC PARAMETERS
@@ -17,11 +17,17 @@ class MSXTape {
     private parameters:MSXTapeParameters;
     private msx:MSX;
     //private buffer:Buffer;
-    public  onload = null;
-    public  onerror = null;
+
+    /* Events */
+    public  on_load = undefined;
+    public  on_block_analysis = undefined;
+    public  on_job_completed = undefined;
+    public  on_error = undefined;
+    public  on_audio_export = undefined;
+
     /* HTML5 Audio Element */
     private audio;
-    private wave;
+    //private wave;
     private data;
 
     /** 
@@ -42,13 +48,6 @@ class MSXTape {
         this.msx = new MSX();
 
         this.audio = new Audio(); // create the HTML5 audio element
-        this.wave = new RIFFWAVE(); // create an empty wave file
-        this.data = []; // yes, it's an array
-
-        this.wave.header.sampleRate = this.parameters.frequenza; // set sample rate to 44KHz
-        this.wave.header.numChannels = 1; // one channels (mono)
-
-        //DataBlock.parametri = this.parameters;
     }
 
 
@@ -61,22 +60,30 @@ class MSXTape {
 
         request.onloadend = function (e) {
             if (e.target.readyState == FileReader.DONE) {
+
+                if (typeof self.on_load !== "undefined") {
+                    // @ts-ignore
+                    self.on_load(request.result.byteLength);
+                }
+
                 self.name = p_file.name
                     .toLowerCase()
                     .replace(".cas", "");
 
                 // @ts-ignore
                 let buffer:Uint8Array = new Uint8Array(request.result);
-                //buffer = new Uint8Array(buffer);
 
-                if (self.msx.load(buffer)) {
-                    if (typeof self.onload !== "undefined") {
-                        self.onload(buffer);
+                // @ts-ignore
+                if (self.msx.load(buffer, self.on_block_analysis)) {
+                    let audio_file = self.msx.export_as_wav();
+                    self.audio.src = audio_file.dataURI; // set audio source
+                    if (typeof self.on_job_completed !== "undefined") {
+                        self.on_job_completed(buffer.length);
                     }
                     return true;
                 } else {
-                    if (typeof self.onerror !== "undefined") {
-                        self.onerror(buffer);
+                    if (typeof self.on_error !== "undefined") {
+                        self.on_error(buffer);
                     }
                     return false;
                 }
@@ -92,17 +99,19 @@ class MSXTape {
     {
         let self = this;
 
+        // @ts-ignore
         if (typeof jQuery !== "undefined") {
+            // @ts-ignore
             jQuery.get(p_url, function(buffer) {
                 var buf = new ArrayBuffer(buffer.length*2); // 2 bytes for each char
                 var bufView = new Uint8Array(buf);
-                for (var i=0, strLen=buffer.length; i < strLen; i++) {
+                for (let i=0, strLen=buffer.length; i < strLen; i++) {
                     bufView[i] = buffer.charCodeAt(i);
                 }
                 // @ts-ignore
                 if (self.load_from_buffer(bufView)) {
-                    if (typeof self.onload !== "undefined") {
-                        self.onload(buffer);
+                    if (typeof self.on_job_completed !== "undefined") {
+                        self.on_job_completed(buffer);
                     }
                 }
             });
@@ -114,24 +123,21 @@ class MSXTape {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    load_from_buffer(p_buffer:Uint8Array)
+    load_from_buffer(p_buffer:Array<number>)
     {
         let result:Boolean;
 
         this.msx = new MSX();
-        result = this.msx.load(p_buffer);
+        result = this.msx.load(p_buffer, this.on_block_analysis);
         if (result) {
             let audio_file = this.msx.export_as_wav();
-            // VECCHIO CODICE
-            //this.wave.Make(this.data);
-            // make the wave file
-            //this.audio.src = this.wave.dataURI; // set audio source
             this.audio.src = audio_file.dataURI; // set audio source
-
         }
 
         return result
     }
+
+    // -=-=---------------------------------------------------------------=-=-
 
     /**
      * Play audio
@@ -141,6 +147,13 @@ class MSXTape {
         this.audio.play();
     }
     
+    // -=-=---------------------------------------------------------------=-=-
+
+    pause()
+    {
+        this.audio.pause();
+    }
+
     // -=-=---------------------------------------------------------------=-=-
 
     /**
@@ -154,18 +167,28 @@ class MSXTape {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    export()
+    save_as_wav():boolean
     {
-        if (typeof this.wave.dataURI !== "undefined") {
-            return export_as_file(this);
-        } else {
-            if (typeof this.onerror !== "undefined") {
-                this.onerror(null);
+        let data = this.msx.export_as_wav().dataURI;
+
+        if (typeof data !== "undefined") {
+            if (typeof this.on_audio_export !== "undefined") {
+                this.on_audio_export(data);
+            } else {
+                return false;
             }
+        } else {
+            if (typeof this.on_error !== "undefined") {
+                this.on_error(null);
+            }
+            return false;
         }
+
+        return true;
     }
 }
 
+
 if (typeof module !== "undefined") {
-    module.exports = MSXTape;
+    module.exports = CassetteJS;
 }

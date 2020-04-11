@@ -5,7 +5,7 @@
 class WAVExport {
 
     public frequenza: number = 44100;  // 28.800hz
-    public bitrate: number = 2400;     // 2400bps
+    public bitrate: number = 2205;     // 2400bps
     public ampiezza: number = 0.90;    // 90% dell'ampiezza massima
     private campionamenti: number;
 
@@ -19,8 +19,13 @@ class WAVExport {
     private wave_silenzio: Array<number>;
 
     public buffer;
-    private buffer_index: Array<number>;
 
+    /**
+     * Class constructor
+     *
+     * @param {DataBlock[]} p_list - List of datablocks to render
+     *                               on an audio file
+     */
     constructor(p_list: DataBlock[]) {
         this.recalculate_waveforms();
         this.buffer = [];
@@ -48,8 +53,8 @@ class WAVExport {
          * l'onda per rappresentare lo 0 deve essere a 2400
          */
         this.wave_bit_0 = new Array<number>();
-        for (i = 0; i < passo * 2; i++) this.wave_bit_0.push(min);
-        for (i = 0; i < passo * 2; i++) this.wave_bit_0.push(max);
+        for (i = 0; i < passo * 2; i++) this.wave_bit_0.push(min); // min
+        for (i = 0; i < passo * 2; i++) this.wave_bit_0.push(max); // max
 
         /* Ricalcola la forma d'onda per rappresentare un bit a 1
          * Per fare un 1 ci vogliono due forme d'onda al doppio
@@ -138,9 +143,9 @@ class WAVExport {
     /**
      * Inserisce un'array nel file audio
      */
-    inserisci_array(p_array: Uint8Array) {
+    inserisci_array(p_array: Array<number>) {
         var i = 0;
-        for (i = 0; i < p_array.byteLength; i++) {
+        for (i = 0; i < p_array.length; i++) {
             this.inserisci_byte(p_array[i]);
         }
     }
@@ -236,6 +241,8 @@ class WAVExport {
     {
         let wav_exporter = new RIFFWAVE();
 
+        wav_exporter.header.sampleRate = this.frequenza; // set sample rate
+        wav_exporter.header.numChannels = 1; // one channels (mono)
         wav_exporter.Make(this.buffer);
         // make the wave file
         return wav_exporter; //.dataURI; // set audio source
