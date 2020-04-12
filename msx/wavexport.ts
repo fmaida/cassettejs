@@ -2,11 +2,14 @@
 /// <reference path="../lib/riffwave.ts" />
 
 
+/**
+ *
+ */
 class WAVExport {
 
-    public frequenza: number = 44100;  // 28.800hz
+    public frequenza: number = 44100;  // 44.100hz
     public bitrate: number = 2205;     // 2400bps
-    public ampiezza: number = 0.90;    // 90% dell'ampiezza massima
+    public ampiezza: number = 0.85;    // 85% dell'ampiezza massima
     private campionamenti: number;
 
     public sincronismo_lungo: number = 2500;
@@ -17,6 +20,11 @@ class WAVExport {
     private wave_bit_0: Array<number>;
     private wave_bit_1: Array<number>;
     private wave_silenzio: Array<number>;
+
+    private wave_sincronismo_lungo:Array<number>;
+    private wave_sincronismo_corto:Array<number>;
+    private wave_silenzio_lungo:Array<number>;
+    private wave_silenzio_corto:Array<number>;
 
     public buffer;
 
@@ -74,6 +82,34 @@ class WAVExport {
          */
         this.wave_silenzio = new Array<number>();
         for (i = 0; i < passo * 4; i++) this.wave_silenzio.push(128);
+
+        /* Sincronismi lunghi e corti */
+        this.wave_sincronismo_lungo = new Array<number>();
+        this.wave_sincronismo_corto = new Array<number>();
+        i = 0;
+        while (i < this.bitrate * this.campionamenti * this.sincronismo_lungo / 1000) {
+            this.wave_sincronismo_lungo.push(...this.wave_bit_1);
+            i += this.wave_bit_1.length;
+        }
+        i = 0;
+        while (i < this.bitrate * this.campionamenti * this.sincronismo_corto / 1000) {
+            this.wave_sincronismo_corto.push(...this.wave_bit_1);
+            i += this.wave_bit_1.length;
+        }
+
+        /* Silenzio lungo e corto */
+        this.wave_silenzio_lungo = new Array<number>();
+        this.wave_silenzio_corto = new Array<number>();
+        i = 0;
+        while (i < this.bitrate * this.campionamenti * this.silenzio_lungo / 1000) {
+            this.wave_silenzio_lungo.push(...this.wave_silenzio);
+            i += this.wave_silenzio.length;
+        }
+        i = 0;
+        while (i < this.bitrate * this.campionamenti * this.silenzio_corto / 1000) {
+            this.wave_silenzio_corto.push(...this.wave_silenzio);
+            i += this.wave_silenzio.length;
+        }
     }
 
     // -=-=---------------------------------------------------------------=-=-
@@ -87,29 +123,25 @@ class WAVExport {
      * @param {number} p_bit - Il bit da scrivere
      */
     inserisci_bit(p_bit: number) {
-        let i: number = 0;
-        let waveform: Array<number>;
+        //let waveform: Array<number>;
 
         /**
          * In base al bit da rappresentare sceglie la forma d'onda più
          * opportuna
          */
         if (p_bit === 0) {
-            waveform = this.wave_bit_0;
+            //waveform = this.wave_bit_0;
+            //this.buffer.push(...waveform);
+            this.buffer.push(...this.wave_bit_0);
         } else if (p_bit === 1) {
-            waveform = this.wave_bit_1;
+            //waveform = this.wave_bit_1;
+            //this.buffer.push(...waveform);
+            this.buffer.push(...this.wave_bit_1);
         } else {
-            waveform = this.wave_silenzio;
+            //waveform = this.wave_silenzio;
+            //this.buffer.push(...waveform);
+            this.buffer.push(...this.wave_silenzio);
         }
-
-        /**
-         * Scrive la forma d'onda nel file audio
-         */
-        /*VECCHIO METODO*/
-        /*for(i = 0; i < waveform.length; i++) {
-            this.buffer.append(waveform[i]);
-        }*/
-        this.buffer.push(...waveform);
 
     }
 
@@ -174,12 +206,20 @@ class WAVExport {
      * almeno 1500-2000ms.
      */
     inserisci_sincronismo(p_durata: number) {
-        let i = 0;
 
-        while (i < this.bitrate * this.campionamenti * p_durata / 1000) {
-            this.inserisci_bit(1);
-            i += this.wave_bit_1.length;
+        if (p_durata == this.sincronismo_lungo) {
+            this.buffer.push(...this.wave_sincronismo_lungo);
+        } else if (p_durata == this.sincronismo_corto) {
+            this.buffer.push(...this.wave_sincronismo_corto);
+        } else {
+            let i = 0;
+
+            while (i < this.bitrate * this.campionamenti * p_durata / 1000) {
+                this.inserisci_bit(1);
+                i += this.wave_bit_1.length;
+            }
         }
+
     }
 
     // -=-=---------------------------------------------------------------=-=-
@@ -188,24 +228,31 @@ class WAVExport {
      * Inserisce un periodo di silenzio nel file audio.
      */
     add_silence(p_durata: number) {
-        let i = 0;
-
-        while (i < this.bitrate * this.campionamenti * p_durata / 1000) {
-            this.inserisci_bit(-1);
-            i += this.wave_silenzio.length;
+        if (p_durata == this.silenzio_lungo) {
+            this.buffer.push(...this.wave_silenzio_lungo);
+        } else if (p_durata == this.silenzio_corto) {
+            this.buffer.push(...this.wave_silenzio_corto);
+        } else {
+            let i:number = 0;
+            while (i < this.bitrate * this.campionamenti * p_durata / 1000) {
+                this.inserisci_bit(-1);
+                i += this.wave_silenzio.length;
+            }
         }
     }
 
     // -=-=---------------------------------------------------------------=-=-
 
     add_long_silence() {
-        this.add_silence(this.silenzio_lungo);
+        this.buffer.push(...this.wave_silenzio_lungo);
+        //this.add_silence(this.silenzio_lungo);
     }
 
     // -=-=---------------------------------------------------------------=-=-
 
     add_short_silence() {
-        this.add_silence(this.silenzio_corto);
+        this.buffer.push(...this.wave_silenzio_corto);
+        //this.add_silence(this.silenzio_corto);
     }
 
     // -=-=---------------------------------------------------------------=-=-
@@ -215,6 +262,7 @@ class WAVExport {
      * all'interno del file audio
      */
     render_block(p_blocco) {
+
         this.inserisci_sincronismo(this.sincronismo_lungo);
         if (p_blocco.type == "ascii") {
             this.inserisci_array(BlockTypes.blocco_file_ascii);
@@ -226,7 +274,7 @@ class WAVExport {
 
         if (p_blocco.type != "custom") {
             this.inserisci_stringa(p_blocco.name);
-            this.add_silence(this.silenzio_corto);
+            this.add_short_silence();
             this.inserisci_sincronismo(this.sincronismo_corto);
         }
 

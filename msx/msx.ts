@@ -20,7 +20,7 @@ class MSX {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    private cerca_blocco(p_inizio:number): DataBlock
+    private seek_single_block(p_inizio:number): DataBlock
     {
         let pos1:number;
         let pos2:number;
@@ -54,16 +54,16 @@ class MSX {
      *
      * depends on this.cerca_blocco
      */
-    private estrai_blocco(p_inizio):DataBlock
+    private extract_block(p_inizio):DataBlock
     {
         let block1:DataBlock;
         let block2:DataBlock;
 
-        block1 = this.cerca_blocco(p_inizio);
+        block1 = this.seek_single_block(p_inizio);
         if (block1 !== null) {
             // console.log(block1);
             if (!block1.is_custom()) {
-                block2 = this.cerca_blocco(block1.get_data_end());
+                block2 = this.seek_single_block(block1.get_data_end());
                 if(block2 !== null) {
                     // Merge the two blocks
                     block1.append_block(block2);
@@ -78,7 +78,7 @@ class MSX {
     /**
      * Continua a caricare il file in memoria
      */
-    private load_blocks()
+    private cassette_scan()
     {
         let pos:number = 0;
         let block:DataBlock;
@@ -94,9 +94,8 @@ class MSX {
                    so it will be easier for your MSX to understand when a block
                    ends and a new one starts.
                  */
-                //this.add_silence(this.parameters.silenzio_lungo);
             }
-            block = this.estrai_blocco(pos);
+            block = this.extract_block(pos);
             if(block !== null) {
                 found = true;
                 this.list.push(block);
@@ -111,8 +110,15 @@ class MSX {
     // -=-=---------------------------------------------------------------=-=-
 
     /**
-     * Load a file in memory and converts it to a wav file
-     * @param p_buffer {Uint8Array} - The file that must be loaded
+     * Load a file in memory (usually a virtual cassette in .cas format
+     * or a ROM file) and split it in one or more datablocks. When
+     * scanning is done, it will export each block to an audio file in
+     * .wav format
+     *
+     * @param {Array<number>} p_buffer - File in stream format
+     * @param {any} callback_function  - When done, it will try to call this
+     *                                   function if defined
+     * @returns {boolean}              - Will return true in case of success
      */
     load(p_buffer:Array<number>, callback_function=undefined)
     {
@@ -128,10 +134,10 @@ class MSX {
 
         /* Let' put the Downloaded file in a variabile */
         this.buffer = new DataBuffer(p_buffer);
-         //console.log(self.buffer);
-        result = this.load_blocks();
+        result = this.cassette_scan();
 
         if (result) {
+            /* Export everything to an audio file */
             this.export_as_wav(callback_function);
         }
 
@@ -145,6 +151,7 @@ class MSX {
         let i:number = 0;
 
         this.export = new WAVExport(this.list);
+        this.export.add_silence(750);
         for (let block of this.list) {
             i += 1;
             if (typeof callback_function !== "undefined") {
@@ -155,9 +162,9 @@ class MSX {
                 this.export.add_long_silence();
             }
         }
+        this.export.add_silence(1000);
 
         return this.export.export_as_wav();
-
     }
 
     // -=-=---------------------------------------------------------------=-=-

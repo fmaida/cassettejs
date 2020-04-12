@@ -1,6 +1,6 @@
 /// <reference path="./lib/riffwave.ts" />
 /// <reference path="./parameters.ts" />
-/// <reference path="./common/buffer.ts" />
+/// <reference path="./common/databuffer.ts" />
 /// <reference path="./msx/datablock.ts" />
 /// <reference path="./msx/msx.ts" />
 /// <reference path="./module.d.ts" />

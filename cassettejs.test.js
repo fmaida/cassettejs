@@ -1,4 +1,4 @@
-const MSXTape = require("./build/cassettejs");
+const MSXTape = require("./dist/cassettejs");
 const fs = require("fs");
 
 
@@ -15,6 +15,7 @@ test("Check if a file can be loaded (Road Fighter)", () => {
     expect(msx_tape.msx.list[1].type).toBe("binary");
     expect(msx_tape.msx.list[1].name).toBe("GAME  ");
 });
+
 test("Check if a file can be loaded (Guttblaster)", () => {
     guttblaster = fs.readFileSync("examples/guttblaster.cas");
     msx_tape = new MSXTape();
@@ -34,3 +35,11 @@ test("Check if a file can be loaded (Guttblaster)", () => {
     expect(msx_tape.msx.list[10].type).toBe("custom");
 });
 
+test("Check if a file can be loaded (Pac-mania)", () => {
+    guttblaster = fs.readFileSync("examples/pacmania.cas");
+    msx_tape = new MSXTape();
+    expect(msx_tape.load_from_buffer(guttblaster)).toBe(true);
+    expect(msx_tape.msx.list[0].type).toBe("binary");
+    expect(msx_tape.msx.list[0].name).toBe("pac   ");
+    expect(msx_tape.msx.list[1].type).toBe("custom");
+});

@@ -96,6 +96,70 @@ class MSXTapeParameters {
             0xD0, 0xD0, 0xD0, 0xD0, 0xD0]);
     }
 }
+class DataBuffer {
+    constructor(p_dati) {
+        this.carica(p_dati);
+    }
+    carica(p_dati) {
+        this.dati = p_dati;
+    }
+    contiene(p_ricerca, p_inizio = 0) {
+        let i = 0;
+        let uguale = true;
+        while ((i < p_ricerca.length) && (uguale)) {
+            if (this.dati[p_inizio + i] !== p_ricerca[i]) {
+                uguale = false;
+            }
+            i++;
+        }
+        return uguale;
+    }
+    cerca(p_ricerca, p_inizio = 0) {
+        let i = p_inizio;
+        let posizione = -1;
+        let trovato = false;
+        while ((i < this.dati.length) && (!trovato)) {
+            if (this.contiene(p_ricerca, i)) {
+                posizione = i;
+                trovato = true;
+            }
+            i++;
+        }
+        return posizione;
+    }
+    splitta(p_inizio = 0, p_fine = this.dati.length) {
+        let output;
+        output = new Array(p_fine - p_inizio);
+        if (typeof (this.dati.slice) !== "undefined") {
+            output = this.dati.slice(p_inizio, p_fine);
+        }
+        else {
+            for (let i = p_inizio; i < p_fine; i++) {
+                output[i - p_inizio] = this.dati[i];
+            }
+        }
+        return output;
+    }
+    length() {
+        return this.dati.length;
+    }
+}
+function data_uri_to_blob(dataURI) {
+    let byteString;
+    if (dataURI.split(',')[0].indexOf('base64') >= 0)
+        byteString = atob(dataURI.split(',')[1]);
+    else
+        byteString = unescape(dataURI.split(',')[1]);
+    let mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+    let ia = new Uint8Array(byteString.length);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ia], { type: mimeString });
+}
+function export_as_file(p_self) {
+    return new Blob([data_uri_to_blob(p_self.wave.dataURI)]);
+}
 class DataBlock {
     constructor(p_data = null) {
         if (p_data !== null)
@@ -202,7 +266,7 @@ class WAVExport {
     constructor(p_list) {
         this.frequenza = 44100;
         this.bitrate = 2205;
-        this.ampiezza = 0.90;
+        this.ampiezza = 0.85;
         this.sincronismo_lungo = 2500;
         this.sincronismo_corto = 1500;
         this.silenzio_lungo = 2000;
@@ -233,20 +297,41 @@ class WAVExport {
         this.wave_silenzio = new Array();
         for (i = 0; i < passo * 4; i++)
             this.wave_silenzio.push(128);
+        this.wave_sincronismo_lungo = new Array();
+        this.wave_sincronismo_corto = new Array();
+        i = 0;
+        while (i < this.bitrate * this.campionamenti * this.sincronismo_lungo / 1000) {
+            this.wave_sincronismo_lungo.push(...this.wave_bit_1);
+            i += this.wave_bit_1.length;
+        }
+        i = 0;
+        while (i < this.bitrate * this.campionamenti * this.sincronismo_corto / 1000) {
+            this.wave_sincronismo_corto.push(...this.wave_bit_1);
+            i += this.wave_bit_1.length;
+        }
+        this.wave_silenzio_lungo = new Array();
+        this.wave_silenzio_corto = new Array();
+        i = 0;
+        while (i < this.bitrate * this.campionamenti * this.silenzio_lungo / 1000) {
+            this.wave_silenzio_lungo.push(...this.wave_silenzio);
+            i += this.wave_silenzio.length;
+        }
+        i = 0;
+        while (i < this.bitrate * this.campionamenti * this.silenzio_corto / 1000) {
+            this.wave_silenzio_corto.push(...this.wave_silenzio);
+            i += this.wave_silenzio.length;
+        }
     }
     inserisci_bit(p_bit) {
-        let i = 0;
-        let waveform;
         if (p_bit === 0) {
-            waveform = this.wave_bit_0;
+            this.buffer.push(...this.wave_bit_0);
         }
         else if (p_bit === 1) {
-            waveform = this.wave_bit_1;
+            this.buffer.push(...this.wave_bit_1);
         }
         else {
-            waveform = this.wave_silenzio;
+            this.buffer.push(...this.wave_silenzio);
         }
-        this.buffer.push(...waveform);
     }
     inserisci_byte(p_byte) {
         this.inserisci_bit(0);
@@ -275,24 +360,40 @@ class WAVExport {
         }
     }
     inserisci_sincronismo(p_durata) {
-        let i = 0;
-        while (i < this.bitrate * this.campionamenti * p_durata / 1000) {
-            this.inserisci_bit(1);
-            i += this.wave_bit_1.length;
+        if (p_durata == this.sincronismo_lungo) {
+            this.buffer.push(...this.wave_sincronismo_lungo);
+        }
+        else if (p_durata == this.sincronismo_corto) {
+            this.buffer.push(...this.wave_sincronismo_corto);
+        }
+        else {
+            let i = 0;
+            while (i < this.bitrate * this.campionamenti * p_durata / 1000) {
+                this.inserisci_bit(1);
+                i += this.wave_bit_1.length;
+            }
         }
     }
     add_silence(p_durata) {
-        let i = 0;
-        while (i < this.bitrate * this.campionamenti * p_durata / 1000) {
-            this.inserisci_bit(-1);
-            i += this.wave_silenzio.length;
+        if (p_durata == this.silenzio_lungo) {
+            this.buffer.push(...this.wave_silenzio_lungo);
+        }
+        else if (p_durata == this.silenzio_corto) {
+            this.buffer.push(...this.wave_silenzio_corto);
+        }
+        else {
+            let i = 0;
+            while (i < this.bitrate * this.campionamenti * p_durata / 1000) {
+                this.inserisci_bit(-1);
+                i += this.wave_silenzio.length;
+            }
         }
     }
     add_long_silence() {
-        this.add_silence(this.silenzio_lungo);
+        this.buffer.push(...this.wave_silenzio_lungo);
     }
     add_short_silence() {
-        this.add_silence(this.silenzio_corto);
+        this.buffer.push(...this.wave_silenzio_corto);
     }
     render_block(p_blocco) {
         this.inserisci_sincronismo(this.sincronismo_lungo);
@@ -307,7 +408,7 @@ class WAVExport {
         }
         if (p_blocco.type != "custom") {
             this.inserisci_stringa(p_blocco.name);
-            this.add_silence(this.silenzio_corto);
+            this.add_short_silence();
             this.inserisci_sincronismo(this.sincronismo_corto);
         }
         this.inserisci_array(p_blocco.data);
@@ -330,59 +431,11 @@ BlockTypes.blocco_file_basic = [0xD3, 0xD3, 0xD3, 0xD3, 0xD3,
     0xD3, 0xD3, 0xD3, 0xD3, 0xD3];
 BlockTypes.blocco_file_binario = [0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
     0xD0, 0xD0, 0xD0, 0xD0, 0xD0];
-class DataBuffer {
-    constructor(p_dati) {
-        this.carica(p_dati);
-    }
-    carica(p_dati) {
-        this.dati = p_dati;
-    }
-    contiene(p_ricerca, p_inizio = 0) {
-        let i = 0;
-        let uguale = true;
-        while ((i < p_ricerca.length) && (uguale)) {
-            if (this.dati[p_inizio + i] !== p_ricerca[i]) {
-                uguale = false;
-            }
-            i++;
-        }
-        return uguale;
-    }
-    cerca(p_ricerca, p_inizio = 0) {
-        let i = p_inizio;
-        let posizione = -1;
-        let trovato = false;
-        while ((i < this.dati.length) && (!trovato)) {
-            if (this.contiene(p_ricerca, i)) {
-                posizione = i;
-                trovato = true;
-            }
-            i++;
-        }
-        return posizione;
-    }
-    splitta(p_inizio = 0, p_fine = this.dati.length) {
-        let output;
-        output = new Array(p_fine - p_inizio);
-        if (typeof (this.dati.slice) !== "undefined") {
-            output = this.dati.slice(p_inizio, p_fine);
-        }
-        else {
-            for (let i = p_inizio; i < p_fine; i++) {
-                output[i - p_inizio] = this.dati[i];
-            }
-        }
-        return output;
-    }
-    length() {
-        return this.dati.length;
-    }
-}
 class MSX {
     constructor() {
         this.buffer = null;
     }
-    cerca_blocco(p_inizio) {
+    seek_single_block(p_inizio) {
         let pos1;
         let pos2;
         let block = null;
@@ -401,13 +454,13 @@ class MSX {
         }
         return block;
     }
-    estrai_blocco(p_inizio) {
+    extract_block(p_inizio) {
         let block1;
         let block2;
-        block1 = this.cerca_blocco(p_inizio);
+        block1 = this.seek_single_block(p_inizio);
         if (block1 !== null) {
             if (!block1.is_custom()) {
-                block2 = this.cerca_blocco(block1.get_data_end());
+                block2 = this.seek_single_block(block1.get_data_end());
                 if (block2 !== null) {
                     block1.append_block(block2);
                 }
@@ -415,7 +468,7 @@ class MSX {
         }
         return block1;
     }
-    load_blocks() {
+    cassette_scan() {
         let pos = 0;
         let block;
         let found = false;
@@ -423,7 +476,7 @@ class MSX {
         while (block !== null) {
             if (pos !== 0) {
             }
-            block = this.estrai_blocco(pos);
+            block = this.extract_block(pos);
             if (block !== null) {
                 found = true;
                 this.list.push(block);
@@ -435,7 +488,7 @@ class MSX {
     load(p_buffer, callback_function = undefined) {
         let result;
         this.buffer = new DataBuffer(p_buffer);
-        result = this.load_blocks();
+        result = this.cassette_scan();
         if (result) {
             this.export_as_wav(callback_function);
         }
@@ -444,6 +497,7 @@ class MSX {
     export_as_wav(callback_function = undefined) {
         let i = 0;
         this.export = new WAVExport(this.list);
+        this.export.add_silence(750);
         for (let block of this.list) {
             i += 1;
             if (typeof callback_function !== "undefined") {
@@ -454,6 +508,7 @@ class MSX {
                 this.export.add_long_silence();
             }
         }
+        this.export.add_silence(1000);
         return this.export.export_as_wav();
     }
 }
@@ -564,21 +619,5 @@ class CassetteJS {
 }
 if (typeof module !== "undefined") {
     module.exports = CassetteJS;
-}
-function data_uri_to_blob(dataURI) {
-    let byteString;
-    if (dataURI.split(',')[0].indexOf('base64') >= 0)
-        byteString = atob(dataURI.split(',')[1]);
-    else
-        byteString = unescape(dataURI.split(',')[1]);
-    let mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-    let ia = new Uint8Array(byteString.length);
-    for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-    }
-    return new Blob([ia], { type: mimeString });
-}
-function export_as_file(p_self) {
-    return new Blob([data_uri_to_blob(p_self.wave.dataURI)]);
 }
 //# sourceMappingURL=cassettejs.js.map
