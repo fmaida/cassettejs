@@ -12,10 +12,14 @@
         "lib/riffwave.ts",
         "parameters.ts",
         "common/databuffer.ts",
+        "common/datablock.ts",
         "common/file_export.ts",
-        "msx/datablock.ts",
-        "msx/wavexport.ts",
+        "msx/msxbuffer.ts",
+        "msx/msxblock.ts",
         "msx/msx.ts",
+        "converters/wavexporter.ts",
+        "converters/msx/msxwavexporter.ts",
+        "player.ts",
         "cassettejs.ts"
     ]
 }

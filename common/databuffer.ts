@@ -1,80 +1,88 @@
 class DataBuffer {
 
-    private dati:Array<number>;
+    private data:Array<number>;
 
     // -=-=---------------------------------------------------------------=-=-
 
     /**
      * Load a buffer in memory
      *
-     * @param {Uint8Array} p_dati
+     * @param {Array<number>} p_data
      */
-    constructor(p_dati:Array<number>) {
-        this.carica(p_dati);
+    constructor(p_data:Array<number>) {
+        this.load(p_data);
     }
 
     // -=-=---------------------------------------------------------------=-=-
 
     /**
-     * Carica il buffer
+     * Load the buffer in memory
      *
-     * @param p_dati
+     * @param p_data
      */
-    carica(p_dati:Array<number>)
+    protected load(p_data:Array<number>)
     {
-        this.dati = p_dati;
+        this.data = p_data;
     }
 
     // -=-=---------------------------------------------------------------=-=-
 
     /**
-     * Verifica se il buffer contiene una sottostringa specificata alla
-     * posizione specificata
+     * Verifies if the buffer contains a substring at a specific position
      *
-     * @param p_ricerca     La sottostringa da ricercare
-     * @param p_inizio      La posizione da cui cercare
-     * @returns {boolean}   Restituisce True se ha trovato la sottostringa
+     * @param p_pattern     - Substring that must be matched
+     * @param p_begin_at    - The starting position from which confronting
+     * @returns {boolean}   - Returns true if this.data and p_pattern match
+     *                        starting from the begin_at position
      */
-    contiene(p_ricerca:Array<number>, p_inizio:number = 0):boolean
+    protected contains(p_pattern:Array<number>, p_begin_at:number = 0): boolean
     {
         let i:number = 0;
-        let uguale:boolean = true;
+        let same:boolean = true;
 
 
         // Finchè il contenuto è uguale continua a verificare
-        while ((i < p_ricerca.length) && (uguale)) {
-            if (this.dati[p_inizio + i] !== p_ricerca[i]) {
-                uguale = false;
+        while ((i < p_pattern.length) && (same)) {
+            if (this.data[p_begin_at + i] !== p_pattern[i]) {
+                same = false;
             }
             i++;
         }
 
-        return uguale;
+        return same;
     }
 
     // -=-=---------------------------------------------------------------=-=-
 
-    cerca(p_ricerca:Array<number>, p_inizio:number = 0):number
+    /**
+     * Seek for a substring in this.data, starting at the array position
+     * pointed by p_begin_at
+     * @param {Array<number>} p_pattern  - Substring that must be found
+     * @param {number} p_begin_at        - Starting position
+     * @returns {number}                 - Returns the position of the substring,
+     *                                     or -1 if the substring is not found
+     */
+    protected seek(p_pattern:Array<number>, p_begin_at:number = 0):number
     {
-        let i:number = p_inizio;
-        let posizione:number = -1;
-        let trovato:boolean = false;
+        let i:number = p_begin_at;
+        let position:number = -1;
+        let found:boolean = false;
 
 
-        while ((i < this.dati.length) && (!trovato)) {
-            if (this.contiene(p_ricerca, i)) {
-                posizione = i;
-                trovato = true;
+        while ((i < this.data.length) && (!found)) {
+            if (this.contains(p_pattern, i)) {
+                position = i;
+                found = true;
             }
             i++;
         }
 
-        return posizione;
+        return position;
     }
 
     // -=-=---------------------------------------------------------------=-=-
 
-    splitta(p_inizio:number = 0, p_fine:number = this.dati.length):Array<number>
+    protected slice(p_inizio:number = 0, p_fine:number = this.data.length):Array<number>
     {
         let output:Array<number>;
 
@@ -83,12 +91,12 @@ class DataBuffer {
 
         // Il browser su cui gira il programma supporta Uint8Array.slice ?
 
-        if (typeof(this.dati.slice) !== "undefined") {
+        if (typeof(this.data.slice) !== "undefined") {
 
             // Se il browser su cui sta girando lo script supporta
             // il metodo "slice" su di un'array Uint8Array, lo usa
 
-            output = this.dati.slice(p_inizio, p_fine);
+            output = this.data.slice(p_inizio, p_fine);
 
         } else {
 
@@ -96,7 +104,7 @@ class DataBuffer {
             // (come ad esempio Safari 9) lo fa a manina da codice
 
             for(let i = p_inizio; i < p_fine; i++) {
-                output[i - p_inizio] = this.dati[i];
+                output[i - p_inizio] = this.data[i];
             }
 
         }
@@ -106,10 +114,14 @@ class DataBuffer {
 
     // -=-=---------------------------------------------------------------=-=-
 
+    /**
+     * Return the lengths of current buffer
+     *
+     * @returns {number} - Length of current buffer
+     */
     length():number
     {
-        return this.dati.length;
+        return this.data.length;
     }
 
 }
-//

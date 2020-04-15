@@ -1,11 +1,13 @@
-/// <reference path="./datablock.ts" />
-/// <reference path="../lib/riffwave.ts" />
+/// <reference path="../../msx/msxblock.ts" />
+/// <reference path="../../lib/riffwave.ts" />
 
 
 /**
  *
  */
-class WAVExport {
+class MSXWAVExporter {
+
+    public on_block_conversion = undefined;
 
     public frequenza: number = 44100;  // 44.100hz
     public bitrate: number = 2205;     // 2400bps
@@ -28,13 +30,14 @@ class WAVExport {
 
     public buffer;
 
+    
     /**
      * Class constructor
      *
      * @param {DataBlock[]} p_list - List of datablocks to render
      *                               on an audio file
      */
-    constructor(p_list: DataBlock[]) {
+    constructor() {
         this.recalculate_waveforms();
         this.buffer = [];
     }
@@ -187,7 +190,7 @@ class WAVExport {
     /**
      * Inserisce una stringa nel file audio
      */
-    inserisci_stringa(p_stringa) {
+    inserisci_stringa(p_stringa:string) {
         var i = 0;
 
         for (i = 0; i < p_stringa.length; i++) {
@@ -265,11 +268,11 @@ class WAVExport {
 
         this.inserisci_sincronismo(this.sincronismo_lungo);
         if (p_blocco.type == "ascii") {
-            this.inserisci_array(BlockTypes.blocco_file_ascii);
+            this.inserisci_array(BlockTypes.ascii_file_block);
         } else if (p_blocco.type == "basic") {
-            this.inserisci_array(BlockTypes.blocco_file_basic);
+            this.inserisci_array(BlockTypes.basic_file_block);
         } else if (p_blocco.type == "binary") {
-            this.inserisci_array(BlockTypes.blocco_file_binario);
+            this.inserisci_array(BlockTypes.binary_file_block);
         }
 
         if (p_blocco.type != "custom") {
@@ -285,7 +288,30 @@ class WAVExport {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    export_as_wav()
+    export_as_wav(p_list:MSXBlock[])
+    {
+        let i:number = 0;
+
+
+        this.add_silence(750);
+        for (let block of p_list) {
+            i += 1;
+            if (typeof this.on_block_conversion !== "undefined") {
+                this.on_block_conversion(i, p_list.length);
+            }
+            this.render_block(block);
+            if (i < p_list.length) {
+                this.add_long_silence();
+            }
+        }
+        this.add_silence(1000);
+
+        return this.create_wav();
+    }
+
+    // -=-=---------------------------------------------------------------=-=-
+
+    create_wav()
     {
         let wav_exporter = new RIFFWAVE();
 
@@ -295,5 +321,6 @@ class WAVExport {
         // make the wave file
         return wav_exporter; //.dataURI; // set audio source
     }
+
 }
 //

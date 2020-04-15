@@ -1,9 +1,11 @@
 /// <reference path="./lib/riffwave.ts" />
 /// <reference path="./parameters.ts" />
 /// <reference path="./common/databuffer.ts" />
-/// <reference path="./msx/datablock.ts" />
+/// <reference path="./msx/msxblock.ts" />
 /// <reference path="./msx/msx.ts" />
+/// <reference path="./converters/wavexporter.ts" />
 /// <reference path="./module.d.ts" />
+/// <reference path="./player.ts" />
 
 /**
  *
@@ -16,6 +18,8 @@ class CassetteJS {
     public  name:string;
     private parameters:MSXTapeParameters;
     private msx:MSX;
+    private export:WAVExporter;
+    private list:DataBlock[];
     //private buffer:Buffer;
 
     /* Events */
@@ -25,8 +29,7 @@ class CassetteJS {
     public  on_error = undefined;
     public  on_audio_export = undefined;
 
-    /* HTML5 Audio Element */
-    private audio;
+    private player:Player;
     //private wave;
     private data;
 
@@ -35,7 +38,8 @@ class CassetteJS {
      */
     constructor()
     {
-       this.initialize();
+        this.list = [];
+        this.initialize();
     }
 
     // -=-=---------------------------------------------------------------=-=-
@@ -46,8 +50,6 @@ class CassetteJS {
 
         this.parameters = new MSXTapeParameters();
         this.msx = new MSX();
-
-        this.audio = new Audio(); // create the HTML5 audio element
     }
 
 
@@ -74,12 +76,15 @@ class CassetteJS {
                 let buffer:Uint8Array = new Uint8Array(request.result);
 
                 // @ts-ignore
-                if (self.msx.load(buffer, self.on_block_analysis)) {
-                    let audio_file = self.msx.export_as_wav();
+                self.list = self.msx.load(buffer, self.on_block_analysis);
+                if (self.list.length > 0) {
+                    self.player = new Player(self.list, self.on_job_completed);
+                    self.player.on_audio_export = self.on_audio_export;
+                    /*let audio_file = self.msx.export_as_wav();
                     self.audio.src = audio_file.dataURI; // set audio source
                     if (typeof self.on_job_completed !== "undefined") {
-                        self.on_job_completed(buffer.length);
-                    }
+                        self.on_job_completed(self.msx);
+                    }*/
                     return true;
                 } else {
                     if (typeof self.on_error !== "undefined") {
@@ -95,12 +100,38 @@ class CassetteJS {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    load_from_remote_file(p_url)
+    load_from_remote_file(p_url, response)
     {
         let self = this;
 
+        if (typeof self.on_load !== "undefined") {
+            // @ts-ignore
+            self.on_load(response.byteLength);
+        }
+
+        self.name = p_url
+            .toLowerCase()
+            .replace(".cas", "");
+
         // @ts-ignore
-        if (typeof jQuery !== "undefined") {
+        //let buffer:Uint8Array = new Uint8Array(response.arrayBuffer());
+
+        // @ts-ignore
+        this.list = self.msx.load(response, self.on_block_analysis);
+        if (this.list.length > 0) {
+            this.player = new Player(this.list, this.on_job_completed);
+            this.player.on_audio_export = this.on_audio_export;
+            return true;
+        } else {
+            if (typeof this.on_error !== "undefined") {
+                this.on_error();
+            }
+            return false;
+        }
+
+    }
+        // @ts-ignore
+        /*if (typeof jQuery !== "undefined") {
             // @ts-ignore
             jQuery.get(p_url, function(buffer) {
                 var buf = new ArrayBuffer(buffer.length*2); // 2 bytes for each char
@@ -119,73 +150,39 @@ class CassetteJS {
         } else {
             return false;
         }
-    }
+    } */
 
     // -=-=---------------------------------------------------------------=-=-
 
-    load_from_buffer(p_buffer:Array<number>)
+    load_from_buffer(p_buffer:Array<number>):boolean
     {
-        let result:Boolean;
+        let result:boolean = false;
 
-        this.msx = new MSX();
-        result = this.msx.load(p_buffer, this.on_block_analysis);
-        if (result) {
-            let audio_file = this.msx.export_as_wav();
-            this.audio.src = audio_file.dataURI; // set audio source
+
+        this.list = this.msx.load(p_buffer, this.on_block_analysis);
+        if (this.list.length > 0) {
+            this.player = new Player(this.list, this.on_job_completed);
+            this.player.on_audio_export = this.on_audio_export;
+            result = true;
         }
 
-        return result
+        return result;
     }
 
     // -=-=---------------------------------------------------------------=-=-
 
-    /**
-     * Play audio
-     */
-    play()
+    get_block(p_index)
     {
-        this.audio.play();
-    }
-    
-    // -=-=---------------------------------------------------------------=-=-
-
-    pause()
-    {
-        this.audio.pause();
+        return this.list[p_index];
     }
 
     // -=-=---------------------------------------------------------------=-=-
 
-    /**
-     * Stop playing a file
-     */
-    stop()
+    get_length()
     {
-        this.audio.pause();
-        this.audio.currentTime = 0;
+        return this.list.length;
     }
 
-    // -=-=---------------------------------------------------------------=-=-
-
-    save_as_wav():boolean
-    {
-        let data = this.msx.export_as_wav().dataURI;
-
-        if (typeof data !== "undefined") {
-            if (typeof this.on_audio_export !== "undefined") {
-                this.on_audio_export(data);
-            } else {
-                return false;
-            }
-        } else {
-            if (typeof this.on_error !== "undefined") {
-                this.on_error(null);
-            }
-            return false;
-        }
-
-        return true;
-    }
 }
 
 

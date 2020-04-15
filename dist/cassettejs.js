@@ -97,78 +97,60 @@ class MSXTapeParameters {
     }
 }
 class DataBuffer {
-    constructor(p_dati) {
-        this.carica(p_dati);
+    constructor(p_data) {
+        this.load(p_data);
     }
-    carica(p_dati) {
-        this.dati = p_dati;
+    load(p_data) {
+        this.data = p_data;
     }
-    contiene(p_ricerca, p_inizio = 0) {
+    contains(p_pattern, p_begin_at = 0) {
         let i = 0;
-        let uguale = true;
-        while ((i < p_ricerca.length) && (uguale)) {
-            if (this.dati[p_inizio + i] !== p_ricerca[i]) {
-                uguale = false;
+        let same = true;
+        while ((i < p_pattern.length) && (same)) {
+            if (this.data[p_begin_at + i] !== p_pattern[i]) {
+                same = false;
             }
             i++;
         }
-        return uguale;
+        return same;
     }
-    cerca(p_ricerca, p_inizio = 0) {
-        let i = p_inizio;
-        let posizione = -1;
-        let trovato = false;
-        while ((i < this.dati.length) && (!trovato)) {
-            if (this.contiene(p_ricerca, i)) {
-                posizione = i;
-                trovato = true;
+    seek(p_pattern, p_begin_at = 0) {
+        let i = p_begin_at;
+        let position = -1;
+        let found = false;
+        while ((i < this.data.length) && (!found)) {
+            if (this.contains(p_pattern, i)) {
+                position = i;
+                found = true;
             }
             i++;
         }
-        return posizione;
+        return position;
     }
-    splitta(p_inizio = 0, p_fine = this.dati.length) {
+    slice(p_inizio = 0, p_fine = this.data.length) {
         let output;
         output = new Array(p_fine - p_inizio);
-        if (typeof (this.dati.slice) !== "undefined") {
-            output = this.dati.slice(p_inizio, p_fine);
+        if (typeof (this.data.slice) !== "undefined") {
+            output = this.data.slice(p_inizio, p_fine);
         }
         else {
             for (let i = p_inizio; i < p_fine; i++) {
-                output[i - p_inizio] = this.dati[i];
+                output[i - p_inizio] = this.data[i];
             }
         }
         return output;
     }
     length() {
-        return this.dati.length;
+        return this.data.length;
     }
-}
-function data_uri_to_blob(dataURI) {
-    let byteString;
-    if (dataURI.split(',')[0].indexOf('base64') >= 0)
-        byteString = atob(dataURI.split(',')[1]);
-    else
-        byteString = unescape(dataURI.split(',')[1]);
-    let mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-    let ia = new Uint8Array(byteString.length);
-    for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-    }
-    return new Blob([ia], { type: mimeString });
-}
-function export_as_file(p_self) {
-    return new Blob([data_uri_to_blob(p_self.wave.dataURI)]);
 }
 class DataBlock {
-    constructor(p_data = null) {
-        if (p_data !== null)
-            this.set_data(p_data);
+    constructor(p_data = undefined) {
+        this.system = "generic";
+        if (typeof p_data !== "undefined")
+            this.import(p_data);
     }
     set_name(p_name) {
-        if (p_name.length > 6) {
-            p_name = p_name.substring(0, 6);
-        }
         this.name = p_name;
     }
     get_name() {
@@ -183,19 +165,10 @@ class DataBlock {
     is_custom() {
         return (this.type == "custom");
     }
-    set_data(p_data) {
+    import(p_data) {
         this.data = p_data;
-        this.type = this.analyze_block_type();
-        if (!this.is_custom()) {
-            this.set_name(this.analyze_block_name());
-            let temp = Array(p_data.length - 16);
-            for (let i = 16; i < p_data.length; i++) {
-                temp[i - 16] = p_data[i];
-            }
-            this.data = temp;
-        }
     }
-    append_block(p_block) {
+    append(p_block) {
         let data = new Array(this.data.length + p_block.data.length);
         let offset = 0;
         for (let i = 0; i < this.data.length; i++) {
@@ -217,27 +190,6 @@ class DataBlock {
             }
         }
         return match;
-    }
-    analyze_block_type() {
-        var block_type = "custom";
-        if (this.contains(BlockTypes.blocco_file_ascii)) {
-            block_type = "ascii";
-        }
-        else if (this.contains(BlockTypes.blocco_file_basic)) {
-            block_type = "basic";
-        }
-        else if (this.contains(BlockTypes.blocco_file_binario)) {
-            block_type = "binary";
-        }
-        return block_type;
-    }
-    analyze_block_name() {
-        var block_name = "";
-        var begin = 10;
-        for (let i = begin; i < begin + 6; i++) {
-            block_name += String.fromCharCode(this.data[i]);
-        }
-        return block_name;
     }
     get_data() {
         return this.data;
@@ -262,8 +214,177 @@ class DataBlock {
         return length;
     }
 }
-class WAVExport {
-    constructor(p_list) {
+function data_uri_to_blob(dataURI) {
+    let byteString;
+    if (dataURI.split(',')[0].indexOf('base64') >= 0)
+        byteString = atob(dataURI.split(',')[1]);
+    else
+        byteString = unescape(dataURI.split(',')[1]);
+    let mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+    let ia = new Uint8Array(byteString.length);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ia], { type: mimeString });
+}
+function export_as_file(p_self) {
+    return new Blob([data_uri_to_blob(p_self.wave.dataURI)]);
+}
+class BlockTypes {
+}
+BlockTypes.header_block = [0x1F, 0xA6, 0xDE, 0xBA, 0xCC, 0x13, 0x7D, 0x74];
+BlockTypes.ascii_file_block = [0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA,
+    0xEA, 0xEA, 0xEA, 0xEA];
+BlockTypes.basic_file_block = [0xD3, 0xD3, 0xD3, 0xD3, 0xD3,
+    0xD3, 0xD3, 0xD3, 0xD3, 0xD3];
+BlockTypes.binary_file_block = [0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
+    0xD0, 0xD0, 0xD0, 0xD0, 0xD0];
+class MSXBuffer extends DataBuffer {
+    extract_block(p_inizio) {
+        let block1;
+        let block2;
+        block1 = this.seek_single_block(p_inizio);
+        if (block1 !== null) {
+            if (!block1.is_custom()) {
+                block2 = this.seek_single_block(block1.get_data_end());
+                if (block2 !== null) {
+                    block1.append(block2);
+                }
+            }
+        }
+        return block1;
+    }
+    seek_single_block(p_inizio) {
+        let pos1;
+        let pos2;
+        let block = null;
+        pos1 = this.seek(BlockTypes.header_block, p_inizio);
+        if (pos1 >= 0) {
+            pos1 += BlockTypes.header_block.length;
+            pos2 = this.seek(BlockTypes.header_block, pos1);
+            if (pos2 < 0) {
+                pos2 = this.length();
+            }
+            block = new MSXBlock(this.slice(pos1, pos2));
+            block.set_data_begin(pos1);
+            block.set_data_end(pos2);
+        }
+        else {
+        }
+        return block;
+    }
+}
+class MSXBlock extends DataBlock {
+    constructor(p_data = undefined) {
+        super(p_data);
+        this.system = "msx";
+    }
+    set_name(p_name) {
+        if (p_name.length > 6) {
+            p_name = p_name.substring(0, 6);
+        }
+        this.name = p_name;
+    }
+    get_name() {
+        return this.name;
+    }
+    set_type(p_type) {
+        this.type = p_type;
+    }
+    get_type() {
+        return this.type;
+    }
+    is_custom() {
+        return (this.type == "custom");
+    }
+    import(p_data) {
+        this.data = p_data;
+        this.type = this.analyze_block_type();
+        if (!this.is_custom()) {
+            this.set_name(this.analyze_block_name());
+            let temp = Array(p_data.length - 16);
+            for (let i = 16; i < p_data.length; i++) {
+                temp[i - 16] = p_data[i];
+            }
+            this.data = temp;
+        }
+    }
+    analyze_block_type() {
+        var block_type = "custom";
+        if (this.contains(BlockTypes.ascii_file_block)) {
+            block_type = "ascii";
+        }
+        else if (this.contains(BlockTypes.basic_file_block)) {
+            block_type = "basic";
+        }
+        else if (this.contains(BlockTypes.binary_file_block)) {
+            block_type = "binary";
+        }
+        return block_type;
+    }
+    analyze_block_name() {
+        var block_name = "";
+        var begin = 10;
+        for (let i = begin; i < begin + 6; i++) {
+            block_name += String.fromCharCode(this.data[i]);
+        }
+        return block_name;
+    }
+    is_ascii() {
+        return this.type === "ascii";
+    }
+    is_basic() {
+        return this.type === "basic";
+    }
+    is_binary() {
+        return this.type === "binary";
+    }
+}
+class Cassette {
+    constructor() {
+    }
+    load(p_buffer, callback_function = undefined) {
+        let buffer = new DataBuffer(p_buffer);
+        return this.analyse(buffer);
+    }
+    analyse(buffer) {
+        return [];
+    }
+}
+class MSX extends Cassette {
+    load(p_buffer, callback_function = undefined) {
+        let buffer;
+        let list;
+        buffer = new MSXBuffer(p_buffer);
+        list = this.analyse(buffer);
+        if (list.length > 0) {
+            this.export_as_wav(callback_function);
+        }
+        return list;
+    }
+    analyse(buffer) {
+        let pos = 0;
+        let block = undefined;
+        let found = false;
+        let list = [];
+        while (block !== null) {
+            if (pos !== 0) {
+            }
+            block = buffer.extract_block(pos);
+            if (block !== null) {
+                found = true;
+                list.push(block);
+                pos = block.get_data_end();
+            }
+        }
+        return list;
+    }
+    export_as_wav(callback_function = undefined) {
+    }
+}
+class MSXWAVExporter {
+    constructor() {
+        this.on_block_conversion = undefined;
         this.frequenza = 44100;
         this.bitrate = 2205;
         this.ampiezza = 0.85;
@@ -398,13 +519,13 @@ class WAVExport {
     render_block(p_blocco) {
         this.inserisci_sincronismo(this.sincronismo_lungo);
         if (p_blocco.type == "ascii") {
-            this.inserisci_array(BlockTypes.blocco_file_ascii);
+            this.inserisci_array(BlockTypes.ascii_file_block);
         }
         else if (p_blocco.type == "basic") {
-            this.inserisci_array(BlockTypes.blocco_file_basic);
+            this.inserisci_array(BlockTypes.basic_file_block);
         }
         else if (p_blocco.type == "binary") {
-            this.inserisci_array(BlockTypes.blocco_file_binario);
+            this.inserisci_array(BlockTypes.binary_file_block);
         }
         if (p_blocco.type != "custom") {
             this.inserisci_stringa(p_blocco.name);
@@ -414,7 +535,23 @@ class WAVExport {
         this.inserisci_array(p_blocco.data);
         return true;
     }
-    export_as_wav() {
+    export_as_wav(p_list) {
+        let i = 0;
+        this.add_silence(750);
+        for (let block of p_list) {
+            i += 1;
+            if (typeof this.on_block_conversion !== "undefined") {
+                this.on_block_conversion(i, p_list.length);
+            }
+            this.render_block(block);
+            if (i < p_list.length) {
+                this.add_long_silence();
+            }
+        }
+        this.add_silence(1000);
+        return this.create_wav();
+    }
+    create_wav() {
         let wav_exporter = new RIFFWAVE();
         wav_exporter.header.sampleRate = this.frequenza;
         wav_exporter.header.numChannels = 1;
@@ -422,94 +559,52 @@ class WAVExport {
         return wav_exporter;
     }
 }
-class BlockTypes {
-}
-BlockTypes.blocco_intestazione = [0x1F, 0xA6, 0xDE, 0xBA, 0xCC, 0x13, 0x7D, 0x74];
-BlockTypes.blocco_file_ascii = [0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA,
-    0xEA, 0xEA, 0xEA, 0xEA];
-BlockTypes.blocco_file_basic = [0xD3, 0xD3, 0xD3, 0xD3, 0xD3,
-    0xD3, 0xD3, 0xD3, 0xD3, 0xD3];
-BlockTypes.blocco_file_binario = [0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
-    0xD0, 0xD0, 0xD0, 0xD0, 0xD0];
-class MSX {
+class WAVExporter {
     constructor() {
-        this.buffer = null;
+        this.msx = new MSXWAVExporter();
     }
-    seek_single_block(p_inizio) {
-        let pos1;
-        let pos2;
-        let block = null;
-        pos1 = this.buffer.cerca(BlockTypes.blocco_intestazione, p_inizio);
-        if (pos1 >= 0) {
-            pos1 += BlockTypes.blocco_intestazione.length;
-            pos2 = this.buffer.cerca(BlockTypes.blocco_intestazione, pos1);
-            if (pos2 < 0) {
-                pos2 = this.buffer.length();
+    export(p_list) {
+        this.buffer = this.msx.export_as_wav(p_list);
+    }
+}
+class Player {
+    constructor(p_list, callback = undefined) {
+        this.on_job_completed = callback;
+        this.audio = new Audio();
+        this.exporter = new WAVExporter();
+        this.exporter.export(p_list);
+        this.audio.src = this.exporter.buffer.dataURI;
+        if (typeof this.on_job_completed !== "undefined") {
+            this.on_job_completed(p_list);
+        }
+    }
+    play() {
+        this.audio.play();
+    }
+    pause() {
+        this.audio.pause();
+    }
+    stop() {
+        this.audio.pause();
+        this.audio.currentTime = 0;
+    }
+    save() {
+        let data = this.exporter.buffer.dataURI;
+        if (typeof data !== "undefined") {
+            if (typeof this.on_audio_export !== "undefined") {
+                this.on_audio_export(data);
             }
-            block = new DataBlock(this.buffer.splitta(pos1, pos2));
-            block.set_data_begin(pos1);
-            block.set_data_end(pos2);
+            else {
+                return false;
+            }
         }
         else {
-        }
-        return block;
-    }
-    extract_block(p_inizio) {
-        let block1;
-        let block2;
-        block1 = this.seek_single_block(p_inizio);
-        if (block1 !== null) {
-            if (!block1.is_custom()) {
-                block2 = this.seek_single_block(block1.get_data_end());
-                if (block2 !== null) {
-                    block1.append_block(block2);
-                }
+            if (typeof this.on_error !== "undefined") {
+                this.on_error("File I/O Error");
             }
+            return false;
         }
-        return block1;
-    }
-    cassette_scan() {
-        let pos = 0;
-        let block;
-        let found = false;
-        this.list = [];
-        while (block !== null) {
-            if (pos !== 0) {
-            }
-            block = this.extract_block(pos);
-            if (block !== null) {
-                found = true;
-                this.list.push(block);
-                pos = block.get_data_end();
-            }
-        }
-        return found;
-    }
-    load(p_buffer, callback_function = undefined) {
-        let result;
-        this.buffer = new DataBuffer(p_buffer);
-        result = this.cassette_scan();
-        if (result) {
-            this.export_as_wav(callback_function);
-        }
-        return result;
-    }
-    export_as_wav(callback_function = undefined) {
-        let i = 0;
-        this.export = new WAVExport(this.list);
-        this.export.add_silence(750);
-        for (let block of this.list) {
-            i += 1;
-            if (typeof callback_function !== "undefined") {
-                callback_function(i, this.list.length);
-            }
-            this.export.render_block(block);
-            if (i < this.list.length) {
-                this.export.add_long_silence();
-            }
-        }
-        this.export.add_silence(1000);
-        return this.export.export_as_wav();
+        return true;
     }
 }
 class CassetteJS {
@@ -519,13 +614,13 @@ class CassetteJS {
         this.on_job_completed = undefined;
         this.on_error = undefined;
         this.on_audio_export = undefined;
+        this.list = [];
         this.initialize();
     }
     initialize() {
         this.name = "";
         this.parameters = new MSXTapeParameters();
         this.msx = new MSX();
-        this.audio = new Audio();
     }
     load_from_local_file(p_file) {
         let request = new FileReader();
@@ -539,12 +634,10 @@ class CassetteJS {
                     .toLowerCase()
                     .replace(".cas", "");
                 let buffer = new Uint8Array(request.result);
-                if (self.msx.load(buffer, self.on_block_analysis)) {
-                    let audio_file = self.msx.export_as_wav();
-                    self.audio.src = audio_file.dataURI;
-                    if (typeof self.on_job_completed !== "undefined") {
-                        self.on_job_completed(buffer.length);
-                    }
+                self.list = self.msx.load(buffer, self.on_block_analysis);
+                if (self.list.length > 0) {
+                    self.player = new Player(self.list, self.on_job_completed);
+                    self.player.on_audio_export = self.on_audio_export;
                     return true;
                 }
                 else {
@@ -557,64 +650,42 @@ class CassetteJS {
         };
         request.readAsArrayBuffer(p_file);
     }
-    load_from_remote_file(p_url) {
+    load_from_remote_file(p_url, response) {
         let self = this;
-        if (typeof jQuery !== "undefined") {
-            jQuery.get(p_url, function (buffer) {
-                var buf = new ArrayBuffer(buffer.length * 2);
-                var bufView = new Uint8Array(buf);
-                for (let i = 0, strLen = buffer.length; i < strLen; i++) {
-                    bufView[i] = buffer.charCodeAt(i);
-                }
-                if (self.load_from_buffer(bufView)) {
-                    if (typeof self.on_job_completed !== "undefined") {
-                        self.on_job_completed(buffer);
-                    }
-                }
-            });
+        if (typeof self.on_load !== "undefined") {
+            self.on_load(response.byteLength);
+        }
+        self.name = p_url
+            .toLowerCase()
+            .replace(".cas", "");
+        this.list = self.msx.load(response, self.on_block_analysis);
+        if (this.list.length > 0) {
+            this.player = new Player(this.list, this.on_job_completed);
+            this.player.on_audio_export = this.on_audio_export;
             return true;
         }
         else {
+            if (typeof this.on_error !== "undefined") {
+                this.on_error();
+            }
             return false;
         }
     }
     load_from_buffer(p_buffer) {
-        let result;
-        this.msx = new MSX();
-        result = this.msx.load(p_buffer, this.on_block_analysis);
-        if (result) {
-            let audio_file = this.msx.export_as_wav();
-            this.audio.src = audio_file.dataURI;
+        let result = false;
+        this.list = this.msx.load(p_buffer, this.on_block_analysis);
+        if (this.list.length > 0) {
+            this.player = new Player(this.list, this.on_job_completed);
+            this.player.on_audio_export = this.on_audio_export;
+            result = true;
         }
         return result;
     }
-    play() {
-        this.audio.play();
+    get_block(p_index) {
+        return this.list[p_index];
     }
-    pause() {
-        this.audio.pause();
-    }
-    stop() {
-        this.audio.pause();
-        this.audio.currentTime = 0;
-    }
-    save_as_wav() {
-        let data = this.msx.export_as_wav().dataURI;
-        if (typeof data !== "undefined") {
-            if (typeof this.on_audio_export !== "undefined") {
-                this.on_audio_export(data);
-            }
-            else {
-                return false;
-            }
-        }
-        else {
-            if (typeof this.on_error !== "undefined") {
-                this.on_error(null);
-            }
-            return false;
-        }
-        return true;
+    get_length() {
+        return this.list.length;
     }
 }
 if (typeof module !== "undefined") {
