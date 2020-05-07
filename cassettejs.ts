@@ -109,6 +109,7 @@ class CassetteJS {
             self.on_load(response.byteLength);
         }
 
+
         self.name = p_url
             .toLowerCase()
             .replace(".cas", "");

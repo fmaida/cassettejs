@@ -58,8 +58,10 @@ class MSXBlock extends DataBlock {
                 temp[i-16] = p_data[i];
             }
             this.data = temp;
+        } else {
+            this.set_name("------");
         }
-
+        this.length = this.data.length;
     }
 
     // -=-=---------------------------------------------------------------=-=-

@@ -3,6 +3,7 @@ class DataBlock {
     public    system:string;
     public    name:string;
     public    type:string;
+    public    length:number;
     protected data:Array<number>;
     protected data_begin:number;
     protected data_end:number;

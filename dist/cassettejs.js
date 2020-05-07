@@ -1,3 +1,16 @@
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var FastBase64 = {
     chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
     encLookup: [],
@@ -11,7 +24,7 @@ var FastBase64 = {
         var dst = '';
         var i = 0;
         while (len > 2) {
-            let n = (src[i] << 16) | (src[i + 1] << 8) | src[i + 2];
+            var n = (src[i] << 16) | (src[i + 1] << 8) | src[i + 2];
             dst += this.encLookup[n >> 12] + this.encLookup[n & 0xFFF];
             len -= 3;
             i += 3;
@@ -36,7 +49,8 @@ var FastBase64 = {
     }
 };
 FastBase64.Init();
-var RIFFWAVE = function (data = undefined) {
+var RIFFWAVE = function (data) {
+    if (data === void 0) { data = undefined; }
     this.data = [];
     this.wav = [];
     this.dataURI = '';
@@ -84,8 +98,8 @@ var RIFFWAVE = function (data = undefined) {
     if (data instanceof Array)
         this.Make(data);
 };
-class MSXTapeParameters {
-    constructor() {
+var MSXTapeParameters = (function () {
+    function MSXTapeParameters() {
         this.blocco_intestazione = new Uint8Array([0x1F, 0xA6, 0xDE, 0xBA,
             0xCC, 0x13, 0x7D, 0x74]);
         this.blocco_file_ascii = new Uint8Array([0xEA, 0xEA, 0xEA, 0xEA, 0xEA,
@@ -95,17 +109,19 @@ class MSXTapeParameters {
         this.blocco_file_binario = new Uint8Array([0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
             0xD0, 0xD0, 0xD0, 0xD0, 0xD0]);
     }
-}
-class DataBuffer {
-    constructor(p_data) {
+    return MSXTapeParameters;
+}());
+var DataBuffer = (function () {
+    function DataBuffer(p_data) {
         this.load(p_data);
     }
-    load(p_data) {
+    DataBuffer.prototype.load = function (p_data) {
         this.data = p_data;
-    }
-    contains(p_pattern, p_begin_at = 0) {
-        let i = 0;
-        let same = true;
+    };
+    DataBuffer.prototype.contains = function (p_pattern, p_begin_at) {
+        if (p_begin_at === void 0) { p_begin_at = 0; }
+        var i = 0;
+        var same = true;
         while ((i < p_pattern.length) && (same)) {
             if (this.data[p_begin_at + i] !== p_pattern[i]) {
                 same = false;
@@ -113,11 +129,12 @@ class DataBuffer {
             i++;
         }
         return same;
-    }
-    seek(p_pattern, p_begin_at = 0) {
-        let i = p_begin_at;
-        let position = -1;
-        let found = false;
+    };
+    DataBuffer.prototype.seek = function (p_pattern, p_begin_at) {
+        if (p_begin_at === void 0) { p_begin_at = 0; }
+        var i = p_begin_at;
+        var position = -1;
+        var found = false;
         while ((i < this.data.length) && (!found)) {
             if (this.contains(p_pattern, i)) {
                 position = i;
@@ -126,103 +143,108 @@ class DataBuffer {
             i++;
         }
         return position;
-    }
-    slice(p_inizio = 0, p_fine = this.data.length) {
-        let output;
+    };
+    DataBuffer.prototype.slice = function (p_inizio, p_fine) {
+        if (p_inizio === void 0) { p_inizio = 0; }
+        if (p_fine === void 0) { p_fine = this.data.length; }
+        var output;
         output = new Array(p_fine - p_inizio);
         if (typeof (this.data.slice) !== "undefined") {
             output = this.data.slice(p_inizio, p_fine);
         }
         else {
-            for (let i = p_inizio; i < p_fine; i++) {
+            for (var i = p_inizio; i < p_fine; i++) {
                 output[i - p_inizio] = this.data[i];
             }
         }
         return output;
-    }
-    length() {
+    };
+    DataBuffer.prototype.length = function () {
         return this.data.length;
-    }
-}
-class DataBlock {
-    constructor(p_data = undefined) {
+    };
+    return DataBuffer;
+}());
+var DataBlock = (function () {
+    function DataBlock(p_data) {
+        if (p_data === void 0) { p_data = undefined; }
         this.system = "generic";
         if (typeof p_data !== "undefined")
-            this.import(p_data);
+            this["import"](p_data);
     }
-    set_name(p_name) {
+    DataBlock.prototype.set_name = function (p_name) {
         this.name = p_name;
-    }
-    get_name() {
+    };
+    DataBlock.prototype.get_name = function () {
         return this.name;
-    }
-    set_type(p_type) {
+    };
+    DataBlock.prototype.set_type = function (p_type) {
         this.type = p_type;
-    }
-    get_type() {
+    };
+    DataBlock.prototype.get_type = function () {
         return this.type;
-    }
-    is_custom() {
+    };
+    DataBlock.prototype.is_custom = function () {
         return (this.type == "custom");
-    }
-    import(p_data) {
+    };
+    DataBlock.prototype["import"] = function (p_data) {
         this.data = p_data;
-    }
-    append(p_block) {
-        let data = new Array(this.data.length + p_block.data.length);
-        let offset = 0;
-        for (let i = 0; i < this.data.length; i++) {
+    };
+    DataBlock.prototype.append = function (p_block) {
+        var data = new Array(this.data.length + p_block.data.length);
+        var offset = 0;
+        for (var i = 0; i < this.data.length; i++) {
             data[offset + i] = this.data[i];
         }
         offset += this.data.length;
-        for (let i = 0; i < p_block.data.length; i++) {
+        for (var i = 0; i < p_block.data.length; i++) {
             data[offset + i] = p_block.data[i];
         }
         this.data = data;
         this.set_data_end(p_block.get_data_end());
-    }
-    contains(p_pattern) {
-        let match = true;
-        for (let i = 0; i < p_pattern.length; i++) {
+    };
+    DataBlock.prototype.contains = function (p_pattern) {
+        var match = true;
+        for (var i = 0; i < p_pattern.length; i++) {
             if (this.data[i] !== p_pattern[i]) {
                 match = false;
                 i = p_pattern.length;
             }
         }
         return match;
-    }
-    get_data() {
+    };
+    DataBlock.prototype.get_data = function () {
         return this.data;
-    }
-    set_data_begin(p_value) {
+    };
+    DataBlock.prototype.set_data_begin = function (p_value) {
         this.data_begin = p_value;
-    }
-    get_data_begin() {
+    };
+    DataBlock.prototype.get_data_begin = function () {
         return this.data_begin;
-    }
-    set_data_end(p_value) {
+    };
+    DataBlock.prototype.set_data_end = function (p_value) {
         this.data_end = p_value;
-    }
-    get_data_end() {
+    };
+    DataBlock.prototype.get_data_end = function () {
         return this.data_end;
-    }
-    get_data_length() {
-        let length = this.data_end - this.data_begin;
+    };
+    DataBlock.prototype.get_data_length = function () {
+        var length = this.data_end - this.data_begin;
         if (length < 0) {
             length = -1;
         }
         return length;
-    }
-}
+    };
+    return DataBlock;
+}());
 function data_uri_to_blob(dataURI) {
-    let byteString;
+    var byteString;
     if (dataURI.split(',')[0].indexOf('base64') >= 0)
         byteString = atob(dataURI.split(',')[1]);
     else
         byteString = unescape(dataURI.split(',')[1]);
-    let mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-    let ia = new Uint8Array(byteString.length);
-    for (let i = 0; i < byteString.length; i++) {
+    var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+    var ia = new Uint8Array(byteString.length);
+    for (var i = 0; i < byteString.length; i++) {
         ia[i] = byteString.charCodeAt(i);
     }
     return new Blob([ia], { type: mimeString });
@@ -230,19 +252,26 @@ function data_uri_to_blob(dataURI) {
 function export_as_file(p_self) {
     return new Blob([data_uri_to_blob(p_self.wave.dataURI)]);
 }
-class BlockTypes {
-}
-BlockTypes.header_block = [0x1F, 0xA6, 0xDE, 0xBA, 0xCC, 0x13, 0x7D, 0x74];
-BlockTypes.ascii_file_block = [0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA,
-    0xEA, 0xEA, 0xEA, 0xEA];
-BlockTypes.basic_file_block = [0xD3, 0xD3, 0xD3, 0xD3, 0xD3,
-    0xD3, 0xD3, 0xD3, 0xD3, 0xD3];
-BlockTypes.binary_file_block = [0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
-    0xD0, 0xD0, 0xD0, 0xD0, 0xD0];
-class MSXBuffer extends DataBuffer {
-    extract_block(p_inizio) {
-        let block1;
-        let block2;
+var BlockTypes = (function () {
+    function BlockTypes() {
+    }
+    BlockTypes.header_block = [0x1F, 0xA6, 0xDE, 0xBA, 0xCC, 0x13, 0x7D, 0x74];
+    BlockTypes.ascii_file_block = [0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA,
+        0xEA, 0xEA, 0xEA, 0xEA];
+    BlockTypes.basic_file_block = [0xD3, 0xD3, 0xD3, 0xD3, 0xD3,
+        0xD3, 0xD3, 0xD3, 0xD3, 0xD3];
+    BlockTypes.binary_file_block = [0xD0, 0xD0, 0xD0, 0xD0, 0xD0,
+        0xD0, 0xD0, 0xD0, 0xD0, 0xD0];
+    return BlockTypes;
+}());
+var MSXBuffer = (function (_super) {
+    __extends(MSXBuffer, _super);
+    function MSXBuffer() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    MSXBuffer.prototype.extract_block = function (p_inizio) {
+        var block1;
+        var block2;
         block1 = this.seek_single_block(p_inizio);
         if (block1 !== null) {
             if (!block1.is_custom()) {
@@ -253,11 +282,11 @@ class MSXBuffer extends DataBuffer {
             }
         }
         return block1;
-    }
-    seek_single_block(p_inizio) {
-        let pos1;
-        let pos2;
-        let block = null;
+    };
+    MSXBuffer.prototype.seek_single_block = function (p_inizio) {
+        var pos1;
+        var pos2;
+        var block = null;
         pos1 = this.seek(BlockTypes.header_block, p_inizio);
         if (pos1 >= 0) {
             pos1 += BlockTypes.header_block.length;
@@ -272,44 +301,52 @@ class MSXBuffer extends DataBuffer {
         else {
         }
         return block;
+    };
+    return MSXBuffer;
+}(DataBuffer));
+var MSXBlock = (function (_super) {
+    __extends(MSXBlock, _super);
+    function MSXBlock(p_data) {
+        if (p_data === void 0) { p_data = undefined; }
+        var _this = _super.call(this, p_data) || this;
+        _this.system = "msx";
+        return _this;
     }
-}
-class MSXBlock extends DataBlock {
-    constructor(p_data = undefined) {
-        super(p_data);
-        this.system = "msx";
-    }
-    set_name(p_name) {
+    MSXBlock.prototype.set_name = function (p_name) {
         if (p_name.length > 6) {
             p_name = p_name.substring(0, 6);
         }
         this.name = p_name;
-    }
-    get_name() {
+    };
+    MSXBlock.prototype.get_name = function () {
         return this.name;
-    }
-    set_type(p_type) {
+    };
+    MSXBlock.prototype.set_type = function (p_type) {
         this.type = p_type;
-    }
-    get_type() {
+    };
+    MSXBlock.prototype.get_type = function () {
         return this.type;
-    }
-    is_custom() {
+    };
+    MSXBlock.prototype.is_custom = function () {
         return (this.type == "custom");
-    }
-    import(p_data) {
+    };
+    MSXBlock.prototype["import"] = function (p_data) {
         this.data = p_data;
         this.type = this.analyze_block_type();
         if (!this.is_custom()) {
             this.set_name(this.analyze_block_name());
-            let temp = Array(p_data.length - 16);
-            for (let i = 16; i < p_data.length; i++) {
+            var temp = Array(p_data.length - 16);
+            for (var i = 16; i < p_data.length; i++) {
                 temp[i - 16] = p_data[i];
             }
             this.data = temp;
         }
-    }
-    analyze_block_type() {
+        else {
+            this.set_name("------");
+        }
+        this.length = this.data.length;
+    };
+    MSXBlock.prototype.analyze_block_type = function () {
         var block_type = "custom";
         if (this.contains(BlockTypes.ascii_file_block)) {
             block_type = "ascii";
@@ -321,52 +358,60 @@ class MSXBlock extends DataBlock {
             block_type = "binary";
         }
         return block_type;
-    }
-    analyze_block_name() {
+    };
+    MSXBlock.prototype.analyze_block_name = function () {
         var block_name = "";
         var begin = 10;
-        for (let i = begin; i < begin + 6; i++) {
+        for (var i = begin; i < begin + 6; i++) {
             block_name += String.fromCharCode(this.data[i]);
         }
         return block_name;
-    }
-    is_ascii() {
+    };
+    MSXBlock.prototype.is_ascii = function () {
         return this.type === "ascii";
-    }
-    is_basic() {
+    };
+    MSXBlock.prototype.is_basic = function () {
         return this.type === "basic";
-    }
-    is_binary() {
+    };
+    MSXBlock.prototype.is_binary = function () {
         return this.type === "binary";
+    };
+    return MSXBlock;
+}(DataBlock));
+var Cassette = (function () {
+    function Cassette() {
     }
-}
-class Cassette {
-    constructor() {
-    }
-    load(p_buffer, callback_function = undefined) {
-        let buffer = new DataBuffer(p_buffer);
+    Cassette.prototype.load = function (p_buffer, callback_function) {
+        if (callback_function === void 0) { callback_function = undefined; }
+        var buffer = new DataBuffer(p_buffer);
         return this.analyse(buffer);
-    }
-    analyse(buffer) {
+    };
+    Cassette.prototype.analyse = function (buffer) {
         return [];
+    };
+    return Cassette;
+}());
+var MSX = (function (_super) {
+    __extends(MSX, _super);
+    function MSX() {
+        return _super !== null && _super.apply(this, arguments) || this;
     }
-}
-class MSX extends Cassette {
-    load(p_buffer, callback_function = undefined) {
-        let buffer;
-        let list;
+    MSX.prototype.load = function (p_buffer, callback_function) {
+        if (callback_function === void 0) { callback_function = undefined; }
+        var buffer;
+        var list;
         buffer = new MSXBuffer(p_buffer);
         list = this.analyse(buffer);
         if (list.length > 0) {
             this.export_as_wav(callback_function);
         }
         return list;
-    }
-    analyse(buffer) {
-        let pos = 0;
-        let block = undefined;
-        let found = false;
-        let list = [];
+    };
+    MSX.prototype.analyse = function (buffer) {
+        var pos = 0;
+        var block = undefined;
+        var found = false;
+        var list = [];
         while (block !== null) {
             if (pos !== 0) {
             }
@@ -378,12 +423,14 @@ class MSX extends Cassette {
             }
         }
         return list;
-    }
-    export_as_wav(callback_function = undefined) {
-    }
-}
-class MSXWAVExporter {
-    constructor() {
+    };
+    MSX.prototype.export_as_wav = function (callback_function) {
+        if (callback_function === void 0) { callback_function = undefined; }
+    };
+    return MSX;
+}(Cassette));
+var MSXWAVExporter = (function () {
+    function MSXWAVExporter() {
         this.on_block_conversion = undefined;
         this.frequenza = 44100;
         this.bitrate = 2205;
@@ -395,12 +442,13 @@ class MSXWAVExporter {
         this.recalculate_waveforms();
         this.buffer = [];
     }
-    recalculate_waveforms() {
+    MSXWAVExporter.prototype.recalculate_waveforms = function () {
+        var _a, _b, _c, _d;
         this.campionamenti = this.frequenza / this.bitrate;
-        let passo = Math.floor(this.campionamenti / 4);
-        let max = Math.floor(255 * this.ampiezza);
-        let min = 255 - max;
-        let i;
+        var passo = Math.floor(this.campionamenti / 4);
+        var max = Math.floor(255 * this.ampiezza);
+        var min = 255 - max;
+        var i;
         this.wave_bit_0 = new Array();
         for (i = 0; i < passo * 2; i++)
             this.wave_bit_0.push(min);
@@ -422,41 +470,42 @@ class MSXWAVExporter {
         this.wave_sincronismo_corto = new Array();
         i = 0;
         while (i < this.bitrate * this.campionamenti * this.sincronismo_lungo / 1000) {
-            this.wave_sincronismo_lungo.push(...this.wave_bit_1);
+            (_a = this.wave_sincronismo_lungo).push.apply(_a, this.wave_bit_1);
             i += this.wave_bit_1.length;
         }
         i = 0;
         while (i < this.bitrate * this.campionamenti * this.sincronismo_corto / 1000) {
-            this.wave_sincronismo_corto.push(...this.wave_bit_1);
+            (_b = this.wave_sincronismo_corto).push.apply(_b, this.wave_bit_1);
             i += this.wave_bit_1.length;
         }
         this.wave_silenzio_lungo = new Array();
         this.wave_silenzio_corto = new Array();
         i = 0;
         while (i < this.bitrate * this.campionamenti * this.silenzio_lungo / 1000) {
-            this.wave_silenzio_lungo.push(...this.wave_silenzio);
+            (_c = this.wave_silenzio_lungo).push.apply(_c, this.wave_silenzio);
             i += this.wave_silenzio.length;
         }
         i = 0;
         while (i < this.bitrate * this.campionamenti * this.silenzio_corto / 1000) {
-            this.wave_silenzio_corto.push(...this.wave_silenzio);
+            (_d = this.wave_silenzio_corto).push.apply(_d, this.wave_silenzio);
             i += this.wave_silenzio.length;
         }
-    }
-    inserisci_bit(p_bit) {
+    };
+    MSXWAVExporter.prototype.inserisci_bit = function (p_bit) {
+        var _a, _b, _c;
         if (p_bit === 0) {
-            this.buffer.push(...this.wave_bit_0);
+            (_a = this.buffer).push.apply(_a, this.wave_bit_0);
         }
         else if (p_bit === 1) {
-            this.buffer.push(...this.wave_bit_1);
+            (_b = this.buffer).push.apply(_b, this.wave_bit_1);
         }
         else {
-            this.buffer.push(...this.wave_silenzio);
+            (_c = this.buffer).push.apply(_c, this.wave_silenzio);
         }
-    }
-    inserisci_byte(p_byte) {
+    };
+    MSXWAVExporter.prototype.inserisci_byte = function (p_byte) {
         this.inserisci_bit(0);
-        for (let i = 0; i < 8; i++) {
+        for (var i = 0; i < 8; i++) {
             if ((p_byte & 1) == 0) {
                 this.inserisci_bit(0);
             }
@@ -467,57 +516,69 @@ class MSXWAVExporter {
         }
         this.inserisci_bit(1);
         this.inserisci_bit(1);
-    }
-    inserisci_array(p_array) {
+    };
+    MSXWAVExporter.prototype.inserisci_array = function (p_array) {
         var i = 0;
         for (i = 0; i < p_array.length; i++) {
             this.inserisci_byte(p_array[i]);
         }
-    }
-    inserisci_stringa(p_stringa) {
+    };
+    MSXWAVExporter.prototype.inserisci_stringa = function (p_stringa) {
         var i = 0;
         for (i = 0; i < p_stringa.length; i++) {
             this.inserisci_byte(p_stringa.charCodeAt(i));
         }
-    }
-    inserisci_sincronismo(p_durata) {
+    };
+    MSXWAVExporter.prototype.inserisci_sincronismo = function (p_durata) {
+        var _a, _b;
         if (p_durata == this.sincronismo_lungo) {
-            this.buffer.push(...this.wave_sincronismo_lungo);
+            (_a = this.buffer).push.apply(_a, this.wave_sincronismo_lungo);
         }
         else if (p_durata == this.sincronismo_corto) {
-            this.buffer.push(...this.wave_sincronismo_corto);
+            (_b = this.buffer).push.apply(_b, this.wave_sincronismo_corto);
         }
         else {
-            let i = 0;
+            var i = 0;
             while (i < this.bitrate * this.campionamenti * p_durata / 1000) {
                 this.inserisci_bit(1);
                 i += this.wave_bit_1.length;
             }
         }
-    }
-    add_silence(p_durata) {
+    };
+    MSXWAVExporter.prototype.add_long_sync = function () {
+        var _a;
+        (_a = this.buffer).push.apply(_a, this.wave_sincronismo_lungo);
+    };
+    MSXWAVExporter.prototype.add_short_sync = function () {
+        var _a;
+        (_a = this.buffer).push.apply(_a, this.wave_sincronismo_corto);
+    };
+    MSXWAVExporter.prototype.add_silence = function (p_durata) {
+        var _a, _b;
         if (p_durata == this.silenzio_lungo) {
-            this.buffer.push(...this.wave_silenzio_lungo);
+            (_a = this.buffer).push.apply(_a, this.wave_silenzio_lungo);
         }
         else if (p_durata == this.silenzio_corto) {
-            this.buffer.push(...this.wave_silenzio_corto);
+            (_b = this.buffer).push.apply(_b, this.wave_silenzio_corto);
         }
         else {
-            let i = 0;
+            var i = 0;
             while (i < this.bitrate * this.campionamenti * p_durata / 1000) {
                 this.inserisci_bit(-1);
                 i += this.wave_silenzio.length;
             }
         }
-    }
-    add_long_silence() {
-        this.buffer.push(...this.wave_silenzio_lungo);
-    }
-    add_short_silence() {
-        this.buffer.push(...this.wave_silenzio_corto);
-    }
-    render_block(p_blocco) {
-        this.inserisci_sincronismo(this.sincronismo_lungo);
+    };
+    MSXWAVExporter.prototype.add_long_silence = function () {
+        var _a;
+        (_a = this.buffer).push.apply(_a, this.wave_silenzio_lungo);
+    };
+    MSXWAVExporter.prototype.add_short_silence = function () {
+        var _a;
+        (_a = this.buffer).push.apply(_a, this.wave_silenzio_corto);
+    };
+    MSXWAVExporter.prototype.render_block = function (p_blocco) {
+        this.add_long_sync();
         if (p_blocco.type == "ascii") {
             this.inserisci_array(BlockTypes.ascii_file_block);
         }
@@ -530,15 +591,16 @@ class MSXWAVExporter {
         if (p_blocco.type != "custom") {
             this.inserisci_stringa(p_blocco.name);
             this.add_short_silence();
-            this.inserisci_sincronismo(this.sincronismo_corto);
+            this.add_short_sync();
         }
         this.inserisci_array(p_blocco.data);
         return true;
-    }
-    export_as_wav(p_list) {
-        let i = 0;
-        this.add_silence(750);
-        for (let block of p_list) {
+    };
+    MSXWAVExporter.prototype.export_as_wav = function (p_list) {
+        var i = 0;
+        this.add_short_silence();
+        for (var _i = 0, p_list_1 = p_list; _i < p_list_1.length; _i++) {
+            var block = p_list_1[_i];
             i += 1;
             if (typeof this.on_block_conversion !== "undefined") {
                 this.on_block_conversion(i, p_list.length);
@@ -548,48 +610,51 @@ class MSXWAVExporter {
                 this.add_long_silence();
             }
         }
-        this.add_silence(1000);
+        this.add_short_silence();
         return this.create_wav();
-    }
-    create_wav() {
-        let wav_exporter = new RIFFWAVE();
+    };
+    MSXWAVExporter.prototype.create_wav = function () {
+        var wav_exporter = new RIFFWAVE();
         wav_exporter.header.sampleRate = this.frequenza;
         wav_exporter.header.numChannels = 1;
         wav_exporter.Make(this.buffer);
         return wav_exporter;
-    }
-}
-class WAVExporter {
-    constructor() {
+    };
+    return MSXWAVExporter;
+}());
+var WAVExporter = (function () {
+    function WAVExporter() {
         this.msx = new MSXWAVExporter();
     }
-    export(p_list) {
+    WAVExporter.prototype["export"] = function (p_list) {
         this.buffer = this.msx.export_as_wav(p_list);
-    }
-}
-class Player {
-    constructor(p_list, callback = undefined) {
+    };
+    return WAVExporter;
+}());
+var Player = (function () {
+    function Player(p_list, callback) {
+        if (callback === void 0) { callback = undefined; }
         this.on_job_completed = callback;
         this.audio = new Audio();
         this.exporter = new WAVExporter();
-        this.exporter.export(p_list);
+        this.exporter["export"](p_list);
         this.audio.src = this.exporter.buffer.dataURI;
         if (typeof this.on_job_completed !== "undefined") {
             this.on_job_completed(p_list);
         }
     }
-    play() {
+    Player.prototype.play = function () {
         this.audio.play();
-    }
-    pause() {
+    };
+    Player.prototype.pause = function () {
         this.audio.pause();
-    }
-    stop() {
+    };
+    Player.prototype.stop = function () {
         this.audio.pause();
         this.audio.currentTime = 0;
-    }
-    save() {
-        let data = this.exporter.buffer.dataURI;
+    };
+    Player.prototype.save = function () {
+        var data = this.exporter.buffer.dataURI;
         if (typeof data !== "undefined") {
             if (typeof this.on_audio_export !== "undefined") {
                 this.on_audio_export(data);
@@ -605,10 +670,11 @@ class Player {
             return false;
         }
         return true;
-    }
-}
-class CassetteJS {
-    constructor() {
+    };
+    return Player;
+}());
+var CassetteJS = (function () {
+    function CassetteJS() {
         this.on_load = undefined;
         this.on_block_analysis = undefined;
         this.on_job_completed = undefined;
@@ -617,14 +683,14 @@ class CassetteJS {
         this.list = [];
         this.initialize();
     }
-    initialize() {
+    CassetteJS.prototype.initialize = function () {
         this.name = "";
         this.parameters = new MSXTapeParameters();
         this.msx = new MSX();
-    }
-    load_from_local_file(p_file) {
-        let request = new FileReader();
-        let self = this;
+    };
+    CassetteJS.prototype.load_from_local_file = function (p_file) {
+        var request = new FileReader();
+        var self = this;
         request.onloadend = function (e) {
             if (e.target.readyState == FileReader.DONE) {
                 if (typeof self.on_load !== "undefined") {
@@ -633,7 +699,7 @@ class CassetteJS {
                 self.name = p_file.name
                     .toLowerCase()
                     .replace(".cas", "");
-                let buffer = new Uint8Array(request.result);
+                var buffer = new Uint8Array(request.result);
                 self.list = self.msx.load(buffer, self.on_block_analysis);
                 if (self.list.length > 0) {
                     self.player = new Player(self.list, self.on_job_completed);
@@ -649,9 +715,9 @@ class CassetteJS {
             }
         };
         request.readAsArrayBuffer(p_file);
-    }
-    load_from_remote_file(p_url, response) {
-        let self = this;
+    };
+    CassetteJS.prototype.load_from_remote_file = function (p_url, response) {
+        var self = this;
         if (typeof self.on_load !== "undefined") {
             self.on_load(response.byteLength);
         }
@@ -670,9 +736,9 @@ class CassetteJS {
             }
             return false;
         }
-    }
-    load_from_buffer(p_buffer) {
-        let result = false;
+    };
+    CassetteJS.prototype.load_from_buffer = function (p_buffer) {
+        var result = false;
         this.list = this.msx.load(p_buffer, this.on_block_analysis);
         if (this.list.length > 0) {
             this.player = new Player(this.list, this.on_job_completed);
@@ -680,14 +746,15 @@ class CassetteJS {
             result = true;
         }
         return result;
-    }
-    get_block(p_index) {
+    };
+    CassetteJS.prototype.get_block = function (p_index) {
         return this.list[p_index];
-    }
-    get_length() {
+    };
+    CassetteJS.prototype.get_length = function () {
         return this.list.length;
-    }
-}
+    };
+    return CassetteJS;
+}());
 if (typeof module !== "undefined") {
     module.exports = CassetteJS;
 }

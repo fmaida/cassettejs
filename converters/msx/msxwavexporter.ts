@@ -179,7 +179,7 @@ class MSXWAVExporter {
      * Inserisce un'array nel file audio
      */
     inserisci_array(p_array: Array<number>) {
-        var i = 0;
+        let i = 0;
         for (i = 0; i < p_array.length; i++) {
             this.inserisci_byte(p_array[i]);
         }
@@ -191,8 +191,7 @@ class MSXWAVExporter {
      * Inserisce una stringa nel file audio
      */
     inserisci_stringa(p_stringa:string) {
-        var i = 0;
-
+        let i = 0;
         for (i = 0; i < p_stringa.length; i++) {
             this.inserisci_byte(p_stringa.charCodeAt(i));
         }
@@ -227,10 +226,25 @@ class MSXWAVExporter {
 
     // -=-=---------------------------------------------------------------=-=-
 
+    add_long_sync()
+    {
+        this.buffer.push(...this.wave_sincronismo_lungo);
+    }
+
+    // -=-=---------------------------------------------------------------=-=-
+
+    add_short_sync()
+    {
+        this.buffer.push(...this.wave_sincronismo_corto);
+    }
+
+    // -=-=---------------------------------------------------------------=-=-
+
     /**
      * Inserisce un periodo di silenzio nel file audio.
      */
-    add_silence(p_durata: number) {
+    add_silence(p_durata: number)
+    {
         if (p_durata == this.silenzio_lungo) {
             this.buffer.push(...this.wave_silenzio_lungo);
         } else if (p_durata == this.silenzio_corto) {
@@ -246,14 +260,16 @@ class MSXWAVExporter {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    add_long_silence() {
+    add_long_silence()
+    {
         this.buffer.push(...this.wave_silenzio_lungo);
         //this.add_silence(this.silenzio_lungo);
     }
 
     // -=-=---------------------------------------------------------------=-=-
 
-    add_short_silence() {
+    add_short_silence()
+    {
         this.buffer.push(...this.wave_silenzio_corto);
         //this.add_silence(this.silenzio_corto);
     }
@@ -264,9 +280,9 @@ class MSXWAVExporter {
      * Genera un blocco completo per trasmettere un file MSX
      * all'interno del file audio
      */
-    render_block(p_blocco) {
-
-        this.inserisci_sincronismo(this.sincronismo_lungo);
+    render_block(p_blocco)
+    {
+        this.add_long_sync(); // inserisci_sincronismo(this.sincronismo_lungo);
         if (p_blocco.type == "ascii") {
             this.inserisci_array(BlockTypes.ascii_file_block);
         } else if (p_blocco.type == "basic") {
@@ -278,7 +294,7 @@ class MSXWAVExporter {
         if (p_blocco.type != "custom") {
             this.inserisci_stringa(p_blocco.name);
             this.add_short_silence();
-            this.inserisci_sincronismo(this.sincronismo_corto);
+            this.add_short_sync(); // inserisci_sincronismo(this.sincronismo_corto);
         }
 
         this.inserisci_array(p_blocco.data);
@@ -292,8 +308,7 @@ class MSXWAVExporter {
     {
         let i:number = 0;
 
-
-        this.add_silence(750);
+        this.add_short_silence();
         for (let block of p_list) {
             i += 1;
             if (typeof this.on_block_conversion !== "undefined") {
@@ -304,7 +319,7 @@ class MSXWAVExporter {
                 this.add_long_silence();
             }
         }
-        this.add_silence(1000);
+        this.add_short_silence();
 
         return this.create_wav();
     }
@@ -321,6 +336,4 @@ class MSXWAVExporter {
         // make the wave file
         return wav_exporter; //.dataURI; // set audio source
     }
-
 }
-//
