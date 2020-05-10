@@ -4,16 +4,21 @@
 class WAVExporter {
 
     private msx:MSXWAVExporter;
-    private buffer;
+    private wav;
 
     constructor()
     {
         this.msx = new MSXWAVExporter();
     }
 
-    export(p_list)
+    render(p_list)
     {
-        this.buffer = this.msx.export_as_wav(p_list);
+        this.wav = this.msx.render_as_wav(p_list);
+    }
+
+    export()
+    {
+        return this.wav.dataURI;
     }
 
 }

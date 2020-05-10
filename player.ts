@@ -13,9 +13,9 @@ class Player {
         this.on_job_completed = callback;
         this.audio = new Audio(); // create the HTML5 audio element
         this.exporter = new WAVExporter();
-        this.exporter.export(p_list);
+        this.exporter.render(p_list);
 
-        this.audio.src = this.exporter.buffer.dataURI; // set audio source */
+        this.audio.src = this.exporter.export(); // set audio source */
 
         if (typeof this.on_job_completed !== "undefined") {
             this.on_job_completed(p_list);
@@ -54,7 +54,7 @@ class Player {
 
     save():boolean
     {
-        let data = this.exporter.buffer.dataURI;
+        let data = this.exporter.export();
 
         if (typeof data !== "undefined") {
             if (typeof this.on_audio_export !== "undefined") {

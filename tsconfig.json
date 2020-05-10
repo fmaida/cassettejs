@@ -18,6 +18,7 @@
         "msx/msxblock.ts",
         "msx/msx.ts",
         "converters/wavexporter.ts",
+        "converters/wavbuffer.ts",
         "converters/msx/msxwavexporter.ts",
         "player.ts",
         "cassettejs.ts"

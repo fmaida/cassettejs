@@ -1,6 +1,7 @@
 /// <reference path="../../msx/msxblock.ts" />
+/// <reference path="../../msx/blocktypes.ts" />
 /// <reference path="../../lib/riffwave.ts" />
-
+/// <reference path="../wavbuffer.ts" />
 
 /**
  *
@@ -19,28 +20,25 @@ class MSXWAVExporter {
     public silenzio_lungo: number = 2000;
     public silenzio_corto: number = 1250;
 
-    private wave_bit_0: Array<number>;
-    private wave_bit_1: Array<number>;
-    private wave_silenzio: Array<number>;
+    private wave_bit_0: Uint8Array;
+    private wave_bit_1: Uint8Array;
+    private wave_silenzio: Uint8Array;
 
-    private wave_sincronismo_lungo:Array<number>;
-    private wave_sincronismo_corto:Array<number>;
-    private wave_silenzio_lungo:Array<number>;
-    private wave_silenzio_corto:Array<number>;
+    private wave_sincronismo_lungo: Uint8Array;
+    private wave_sincronismo_corto: Uint8Array;
+    private wave_silenzio_lungo: Uint8Array;
+    private wave_silenzio_corto: Uint8Array;
 
-    public buffer;
+    public buffer: WAVBuffer;
 
     
     /**
      * Class constructor
-     *
-     * @param {DataBlock[]} p_list - List of datablocks to render
-     *                               on an audio file
      */
     constructor() {
-        this.recalculate_waveforms();
-        this.buffer = [];
+        this.build_waveforms();
     }
+
 
     // -=-=---------------------------------------------------------------=-=-
 
@@ -49,13 +47,14 @@ class MSXWAVExporter {
      * e gli uno in base al bitrate deciso per il file (1200bps/2400bps/...)
      * ed alla frequenza del file di output decisa.
      */
-    recalculate_waveforms() {
+    build_waveforms() {
         this.campionamenti = this.frequenza / this.bitrate;
         let passo = Math.floor(this.campionamenti / 4);
 
         let max: number = Math.floor(255 * this.ampiezza);
         let min: number = 255 - max;
-        let i: number;
+        let i, j: number;
+        let pos: number;
 
         /**
          * Ricalcola la forma d'onda per rappresentare un bit a 0
@@ -63,9 +62,16 @@ class MSXWAVExporter {
          * frequenza desiderata. Es: Se trasmetto a 2400bps
          * l'onda per rappresentare lo 0 deve essere a 2400
          */
-        this.wave_bit_0 = new Array<number>();
-        for (i = 0; i < passo * 2; i++) this.wave_bit_0.push(min); // min
-        for (i = 0; i < passo * 2; i++) this.wave_bit_0.push(max); // max
+        this.wave_bit_0 = new Uint8Array(passo * 4);
+        pos = 0;
+        for (i = 0; i < passo * 2; i++) {
+            this.wave_bit_0[pos] = min;
+            pos += 1;
+        } // min
+        for (i = 0; i < passo * 2; i++) {
+            this.wave_bit_0[pos] = max;
+            pos += 1;
+        } // max
 
         /* Ricalcola la forma d'onda per rappresentare un bit a 1
          * Per fare un 1 ci vogliono due forme d'onda al doppio
@@ -73,44 +79,79 @@ class MSXWAVExporter {
          * rappresentare l'1 devono essere a 4800.
          */
 
-        this.wave_bit_1 = new Array<number>();
-        for (i = 0; i < passo; i++) this.wave_bit_1.push(min);
-        for (i = 0; i < passo; i++) this.wave_bit_1.push(max);
-        for (i = 0; i < passo; i++) this.wave_bit_1.push(min);
-        for (i = 0; i < passo; i++) this.wave_bit_1.push(max);
+        this.wave_bit_1 = new Uint8Array(passo * 4);
+        pos = 0;
+        for (j = 0; j < 2; j++) {
+            for (i = 0; i < passo; i++) {
+                this.wave_bit_1[pos] = min;
+                pos += 1;
+            }
+            for (i = 0; i < passo; i++) {
+                this.wave_bit_1[pos] = max;
+                pos += 1;
+            }
+        }
 
         /** Ed infine ricalcola la forma d'inda per rappresentare
          * il silenzio. Nei file audio Uint8 i valori vanno da
          * 0 a 255, per cui il silenzio è nel valore mediano (128)
          */
-        this.wave_silenzio = new Array<number>();
-        for (i = 0; i < passo * 4; i++) this.wave_silenzio.push(128);
+        this.wave_silenzio = new Uint8Array(passo*4);
+        pos = 0
+        for (i = 0; i < passo * 4; i++) {
+            this.wave_silenzio[pos] = 128;
+            pos += 1;
+        }
 
         /* Sincronismi lunghi e corti */
-        this.wave_sincronismo_lungo = new Array<number>();
-        this.wave_sincronismo_corto = new Array<number>();
+        let max_long_sync = this.bitrate
+            * this.campionamenti
+            * (this.sincronismo_lungo / 1000);
+        max_long_sync = Math.floor(max_long_sync / this.campionamenti)
+            * this.campionamenti;
+        let max_short_sync = this.bitrate
+            * this.campionamenti
+            * this.sincronismo_corto / 1000;
+        max_short_sync = Math.floor(max_short_sync / this.campionamenti)
+            * this.campionamenti;
+        this.wave_sincronismo_lungo = new Uint8Array(max_long_sync);
+        this.wave_sincronismo_corto = new Uint8Array(max_short_sync);
+        pos = 0;
         i = 0;
-        while (i < this.bitrate * this.campionamenti * this.sincronismo_lungo / 1000) {
-            this.wave_sincronismo_lungo.push(...this.wave_bit_1);
+        while (i < max_long_sync) {
+            //console.log(i.toString() + " / " + max_long_sync.toString());
+            this.wave_sincronismo_lungo.set(this.wave_bit_1, i);
             i += this.wave_bit_1.length;
         }
         i = 0;
-        while (i < this.bitrate * this.campionamenti * this.sincronismo_corto / 1000) {
-            this.wave_sincronismo_corto.push(...this.wave_bit_1);
+        while (i < max_short_sync) {
+            this.wave_sincronismo_corto.set(this.wave_bit_1, i);
             i += this.wave_bit_1.length;
         }
 
         /* Silenzio lungo e corto */
-        this.wave_silenzio_lungo = new Array<number>();
-        this.wave_silenzio_corto = new Array<number>();
+        let max_long_silence = this.bitrate
+            * this.campionamenti
+            * this.silenzio_lungo / 1000;
+        max_long_silence = Math.floor(max_long_silence / this.campionamenti)
+            * this.campionamenti;
+
+        let max_short_silence = this.bitrate
+            * this.campionamenti
+            * this.silenzio_corto / 1000;
+        max_short_silence = Math.floor(max_short_silence / this.campionamenti)
+            * this.campionamenti;
+
+        this.wave_silenzio_lungo = new Uint8Array(max_long_silence);
+        this.wave_silenzio_corto = new Uint8Array(max_short_silence);
         i = 0;
-        while (i < this.bitrate * this.campionamenti * this.silenzio_lungo / 1000) {
-            this.wave_silenzio_lungo.push(...this.wave_silenzio);
+        while (i < max_long_silence) {
+            this.wave_silenzio_lungo.set(this.wave_silenzio, i);
             i += this.wave_silenzio.length;
         }
         i = 0;
-        while (i < this.bitrate * this.campionamenti * this.silenzio_corto / 1000) {
-            this.wave_silenzio_corto.push(...this.wave_silenzio);
+        while (i < max_short_silence) {
+            this.wave_silenzio_corto.set(this.wave_silenzio, i);
             i += this.wave_silenzio.length;
         }
     }
@@ -135,15 +176,15 @@ class MSXWAVExporter {
         if (p_bit === 0) {
             //waveform = this.wave_bit_0;
             //this.buffer.push(...waveform);
-            this.buffer.push(...this.wave_bit_0);
+            this.buffer.push(this.wave_bit_0);
         } else if (p_bit === 1) {
             //waveform = this.wave_bit_1;
             //this.buffer.push(...waveform);
-            this.buffer.push(...this.wave_bit_1);
+            this.buffer.push(this.wave_bit_1);
         } else {
             //waveform = this.wave_silenzio;
             //this.buffer.push(...waveform);
-            this.buffer.push(...this.wave_silenzio);
+            this.buffer.push(this.wave_silenzio);
         }
 
     }
@@ -178,9 +219,8 @@ class MSXWAVExporter {
     /**
      * Inserisce un'array nel file audio
      */
-    inserisci_array(p_array: Array<number>) {
-        let i = 0;
-        for (i = 0; i < p_array.length; i++) {
+    inserisci_array(p_array: Uint8Array) {
+        for (let i = 0; i < p_array.length; i++) {
             this.inserisci_byte(p_array[i]);
         }
     }
@@ -191,8 +231,7 @@ class MSXWAVExporter {
      * Inserisce una stringa nel file audio
      */
     inserisci_stringa(p_stringa:string) {
-        let i = 0;
-        for (i = 0; i < p_stringa.length; i++) {
+        for (let i = 0; i < p_stringa.length; i++) {
             this.inserisci_byte(p_stringa.charCodeAt(i));
         }
     }
@@ -210,9 +249,9 @@ class MSXWAVExporter {
     inserisci_sincronismo(p_durata: number) {
 
         if (p_durata == this.sincronismo_lungo) {
-            this.buffer.push(...this.wave_sincronismo_lungo);
+            this.buffer.push(this.wave_sincronismo_lungo);
         } else if (p_durata == this.sincronismo_corto) {
-            this.buffer.push(...this.wave_sincronismo_corto);
+            this.buffer.push(this.wave_sincronismo_corto);
         } else {
             let i = 0;
 
@@ -228,14 +267,14 @@ class MSXWAVExporter {
 
     add_long_sync()
     {
-        this.buffer.push(...this.wave_sincronismo_lungo);
+        this.buffer.push(this.wave_sincronismo_lungo);
     }
 
     // -=-=---------------------------------------------------------------=-=-
 
     add_short_sync()
     {
-        this.buffer.push(...this.wave_sincronismo_corto);
+        this.buffer.push(this.wave_sincronismo_corto);
     }
 
     // -=-=---------------------------------------------------------------=-=-
@@ -246,9 +285,9 @@ class MSXWAVExporter {
     add_silence(p_durata: number)
     {
         if (p_durata == this.silenzio_lungo) {
-            this.buffer.push(...this.wave_silenzio_lungo);
+            this.buffer.push(this.wave_silenzio_lungo);
         } else if (p_durata == this.silenzio_corto) {
-            this.buffer.push(...this.wave_silenzio_corto);
+            this.buffer.push(this.wave_silenzio_corto);
         } else {
             let i:number = 0;
             while (i < this.bitrate * this.campionamenti * p_durata / 1000) {
@@ -262,7 +301,7 @@ class MSXWAVExporter {
 
     add_long_silence()
     {
-        this.buffer.push(...this.wave_silenzio_lungo);
+        this.buffer.push(this.wave_silenzio_lungo);
         //this.add_silence(this.silenzio_lungo);
     }
 
@@ -270,7 +309,7 @@ class MSXWAVExporter {
 
     add_short_silence()
     {
-        this.buffer.push(...this.wave_silenzio_corto);
+        this.buffer.push(this.wave_silenzio_corto);
         //this.add_silence(this.silenzio_corto);
     }
 
@@ -304,11 +343,16 @@ class MSXWAVExporter {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    export_as_wav(p_list:MSXBlock[])
+    render_as_wav(p_list:MSXBlock[])
     {
-        let i:number = 0;
+        let i:number;
+        let length:number;
+
+
+        this.buffer = new WAVBuffer();
 
         this.add_short_silence();
+        i = 0;
         for (let block of p_list) {
             i += 1;
             if (typeof this.on_block_conversion !== "undefined") {
@@ -329,10 +373,11 @@ class MSXWAVExporter {
     create_wav()
     {
         let wav_exporter = new RIFFWAVE();
+        let gigetto = this.buffer.export();
 
         wav_exporter.header.sampleRate = this.frequenza; // set sample rate
         wav_exporter.header.numChannels = 1; // one channels (mono)
-        wav_exporter.Make(this.buffer);
+        wav_exporter.Make(gigetto);
         // make the wave file
         return wav_exporter; //.dataURI; // set audio source
     }

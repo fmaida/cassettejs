@@ -1,15 +1,15 @@
 class DataBuffer {
 
-    private data:Array<number>;
+    private data:Uint8Array;
 
     // -=-=---------------------------------------------------------------=-=-
 
     /**
      * Load a buffer in memory
      *
-     * @param {Array<number>} p_data
+     * @param {Uint8Array} p_data
      */
-    constructor(p_data:Array<number>) {
+    constructor(p_data:Uint8Array) {
         this.load(p_data);
     }
 
@@ -20,7 +20,7 @@ class DataBuffer {
      *
      * @param p_data
      */
-    protected load(p_data:Array<number>)
+    protected load(p_data:Uint8Array)
     {
         this.data = p_data;
     }
@@ -35,7 +35,7 @@ class DataBuffer {
      * @returns {boolean}   - Returns true if this.data and p_pattern match
      *                        starting from the begin_at position
      */
-    protected contains(p_pattern:Array<number>, p_begin_at:number = 0): boolean
+    protected contains(p_pattern:Uint8Array, p_begin_at:number = 0): boolean
     {
         let i:number = 0;
         let same:boolean = true;
@@ -57,12 +57,12 @@ class DataBuffer {
     /**
      * Seek for a substring in this.data, starting at the array position
      * pointed by p_begin_at
-     * @param {Array<number>} p_pattern  - Substring that must be found
-     * @param {number} p_begin_at        - Starting position
-     * @returns {number}                 - Returns the position of the substring,
-     *                                     or -1 if the substring is not found
+     * @param {Uint8Array} p_pattern - Substring that must be found
+     * @param {number} p_begin_at    - Starting position
+     * @returns {number}             - Returns the position of the substring,
+     *                                 or -1 if the substring is not found
      */
-    protected seek(p_pattern:Array<number>, p_begin_at:number = 0):number
+    protected seek(p_pattern:Uint8Array, p_begin_at:number = 0):number
     {
         let i:number = p_begin_at;
         let position:number = -1;
@@ -82,12 +82,12 @@ class DataBuffer {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    protected slice(p_inizio:number = 0, p_fine:number = this.data.length):Array<number>
+    protected slice(p_inizio:number = 0, p_fine:number = this.data.length):Uint8Array
     {
-        let output:Array<number>;
+        let output:Uint8Array;
 
 
-        output = new Array<number>(p_fine - p_inizio);
+        output = new Uint8Array(p_fine - p_inizio);
 
         // Il browser su cui gira il programma supporta Uint8Array.slice ?
 

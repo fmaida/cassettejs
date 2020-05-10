@@ -3,7 +3,7 @@
 
 class MSXBlock extends DataBlock {
 
-    constructor(p_data:Array<number> = undefined)
+    constructor(p_data:Uint8Array = undefined)
     {
         super(p_data);
         this.system = "msx";
@@ -47,13 +47,13 @@ class MSXBlock extends DataBlock {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    public import(p_data:Array<number>): void
+    public import(p_data:Uint8Array): void
     {
         this.data = p_data;
         this.type = this.analyze_block_type();
         if (!this.is_custom()) {
             this.set_name(this.analyze_block_name());
-            let temp:Array<number> = Array<number>(p_data.length - 16);
+            let temp:Uint8Array = new Uint8Array(p_data.length - 16);
             for(let i=16;i<p_data.length;i++) {
                 temp[i-16] = p_data[i];
             }

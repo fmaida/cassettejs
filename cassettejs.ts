@@ -1,4 +1,3 @@
-/// <reference path="./lib/riffwave.ts" />
 /// <reference path="./parameters.ts" />
 /// <reference path="./common/databuffer.ts" />
 /// <reference path="./msx/msxblock.ts" />
@@ -16,7 +15,7 @@ class CassetteJS {
     // GENERIC PARAMETERS
     // -=-=---------------------------------------------------------------=-=-
     public  name:string;
-    private parameters:MSXTapeParameters;
+    //private parameters:MSXTapeParameters;
     private msx:MSX;
     private export:WAVExporter;
     private list:DataBlock[];
@@ -30,8 +29,6 @@ class CassetteJS {
     public  on_audio_export = undefined;
 
     private player:Player;
-    //private wave;
-    private data;
 
     /** 
      * Class constructor
@@ -48,7 +45,7 @@ class CassetteJS {
     {
         this.name = "";
 
-        this.parameters = new MSXTapeParameters();
+        //this.parameters = new MSXTapeParameters();
         this.msx = new MSX();
     }
 
@@ -60,14 +57,17 @@ class CassetteJS {
         let request = new FileReader();
         let self = this;
 
+        /* The following event will be executed when the file
+         * will be loaded in memory */
         request.onloadend = function (e) {
             if (e.target.readyState == FileReader.DONE) {
 
-                if (typeof self.on_load !== "undefined") {
+                if (typeof self.on_load === "function") {
                     // @ts-ignore
                     self.on_load(request.result.byteLength);
                 }
 
+                // Remove the extension and set the name to lowercase
                 self.name = p_file.name
                     .toLowerCase()
                     .replace(".cas", "");
@@ -80,14 +80,9 @@ class CassetteJS {
                 if (self.list.length > 0) {
                     self.player = new Player(self.list, self.on_job_completed);
                     self.player.on_audio_export = self.on_audio_export;
-                    /*let audio_file = self.msx.export_as_wav();
-                    self.audio.src = audio_file.dataURI; // set audio source
-                    if (typeof self.on_job_completed !== "undefined") {
-                        self.on_job_completed(self.msx);
-                    }*/
                     return true;
                 } else {
-                    if (typeof self.on_error !== "undefined") {
+                    if (typeof self.on_error === "function") {
                         self.on_error(buffer);
                     }
                     return false;
@@ -104,58 +99,35 @@ class CassetteJS {
     {
         let self = this;
 
-        if (typeof self.on_load !== "undefined") {
+
+        if (typeof self.on_load === "function") {
             // @ts-ignore
             self.on_load(response.byteLength);
         }
-
 
         self.name = p_url
             .toLowerCase()
             .replace(".cas", "");
 
         // @ts-ignore
-        //let buffer:Uint8Array = new Uint8Array(response.arrayBuffer());
-
-        // @ts-ignore
         this.list = self.msx.load(response, self.on_block_analysis);
+
         if (this.list.length > 0) {
             this.player = new Player(this.list, this.on_job_completed);
             this.player.on_audio_export = this.on_audio_export;
             return true;
         } else {
-            if (typeof this.on_error !== "undefined") {
+            if (typeof this.on_error === "function") {
                 this.on_error();
             }
             return false;
         }
 
     }
-        // @ts-ignore
-        /*if (typeof jQuery !== "undefined") {
-            // @ts-ignore
-            jQuery.get(p_url, function(buffer) {
-                var buf = new ArrayBuffer(buffer.length*2); // 2 bytes for each char
-                var bufView = new Uint8Array(buf);
-                for (let i=0, strLen=buffer.length; i < strLen; i++) {
-                    bufView[i] = buffer.charCodeAt(i);
-                }
-                // @ts-ignore
-                if (self.load_from_buffer(bufView)) {
-                    if (typeof self.on_job_completed !== "undefined") {
-                        self.on_job_completed(buffer);
-                    }
-                }
-            });
-            return true;
-        } else {
-            return false;
-        }
-    } */
 
     // -=-=---------------------------------------------------------------=-=-
 
-    load_from_buffer(p_buffer:Array<number>):boolean
+    load_from_buffer(p_buffer:Uint8Array):boolean
     {
         let result:boolean = false;
 

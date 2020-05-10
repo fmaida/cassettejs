@@ -4,12 +4,12 @@ class DataBlock {
     public    name:string;
     public    type:string;
     public    length:number;
-    protected data:Array<number>;
+    protected data:Uint8Array;
     protected data_begin:number;
     protected data_end:number;
 
 
-    public constructor(p_data:Array<number> = undefined)
+    public constructor(p_data:Uint8Array = undefined)
     {
         this.system = "generic";
         if (typeof p_data !== "undefined") this.import(p_data);
@@ -52,7 +52,7 @@ class DataBlock {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    public import(p_data:Array<number>): void
+    public import(p_data:Uint8Array): void
     {
         this.data = p_data;
     }
@@ -61,7 +61,8 @@ class DataBlock {
 
     public append(p_block:DataBlock)
     {
-        let data:Array<number> = new Array<number>(this.data.length + p_block.data.length)
+        let data:Uint8Array = new Uint8Array(this.data.length
+            + p_block.data.length)
         let offset:number = 0;
 
         for(let i=0; i<this.data.length; i++) {
@@ -78,7 +79,7 @@ class DataBlock {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    protected contains(p_pattern:Array<number>): Boolean
+    protected contains(p_pattern:Uint8Array): Boolean
     {
         let match = true;
 
@@ -94,7 +95,7 @@ class DataBlock {
 
     // -=-=---------------------------------------------------------------=-=-
 
-    public get_data(): Array<number>
+    public get_data(): Uint8Array
     {
         return this.data;
     }

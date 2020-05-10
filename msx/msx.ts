@@ -24,7 +24,7 @@ class MSX extends Cassette {
      *                                   function if defined
      * @returns {boolean}              - Will return true in case of success
      */
-    load(p_buffer:Array<number>, callback_function:() => void = undefined): MSXBlock[]
+    load(p_buffer:Uint8Array, callback_function:() => void = undefined): MSXBlock[]
     {
         let buffer:MSXBuffer;
         let list:MSXBlock[];
@@ -39,11 +39,10 @@ class MSX extends Cassette {
 
         /* Let' put the Downloaded file in a variabile */
         buffer = new MSXBuffer(p_buffer);
-        list = this.analyse(buffer);
+        list = this.analyse(buffer, callback_function);
 
         if (list.length > 0) {
             /* Export everything to an audio file */
-            this.export_as_wav(callback_function);
         }
 
         return list;
@@ -54,7 +53,7 @@ class MSX extends Cassette {
     /**
      * Continua a caricare il file in memoria
      */
-    protected analyse(buffer:MSXBuffer): MSXBlock[]
+    protected analyse(buffer:MSXBuffer, callback_function): MSXBlock[]
     {
         let pos:number = 0;
         let block:MSXBlock = undefined;
@@ -74,18 +73,14 @@ class MSX extends Cassette {
             if (block !== null) {
                 found = true;
                 list.push(block);
+                if (typeof callback_function === "function") {
+                    callback_function(block);
+                }
                 pos = block.get_data_end();
             }
         }
 
         return list
-    }
-
-    // -=-=---------------------------------------------------------------=-=-
-
-    export_as_wav(callback_function: (n:number, count:number) => void = undefined)
-    {
-
     }
 
 }
